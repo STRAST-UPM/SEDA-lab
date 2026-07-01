@@ -49,12 +49,6 @@ services:
     depends_on:
       - mosquitto
       - postgres
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:1880"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
     networks:
       - seda_net
 
