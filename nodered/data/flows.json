@@ -96,7 +96,7 @@
     "type": "function",
     "z": "seda_lab_flow",
     "name": "Build command insert",
-    "func": "const payload = msg.payload;\n\nfunction escapeSql(value) {\n    return String(value).replace(/'/g, \"''\");\n}\n\nif (!payload || typeof payload !== \"object\") {\n    msg.payload = \"Invalid command payload. Expected JSON object.\";\n    return null;\n}\n\nconst componentMap = {\n    \"battery\": \"BAT1\",\n    \"pv\": \"PV1\",\n    \"grid\": \"PCC1\",\n    \"simulator\": \"MCCB1\"\n};\n\nconst mqttComponentId = String(payload.component_id || \"\");\nconst sqlComponentCode = componentMap[mqttComponentId] || mqttComponentId;\nconst componentCode = sqlComponentCode.replace(/'/g, \"''\");\nconst command = payload.command;\nconst ts = payload.ts || new Date().toISOString();\n\nif (!mqttComponentId || !command) {\n    msg.payload = \"Invalid command payload. component_id and command are required.\";\n    return null;\n}\n\nlet valueSql = \"NULL\";\nif (payload.value === \"on\") {\n    valueSql = \"1\";\n} else if (payload.value === \"off\") {\n    valueSql = \"0\";\n} else if (payload.value !== undefined && payload.value !== null && payload.value !== \"\") {\n    const numericValue = Number(payload.value);\n    valueSql = Number.isNaN(numericValue) ? \"NULL\" : String(numericValue);\n}\n\nconst sql = `INSERT INTO \"command\" (component_id, ts, command, value, status)\nSELECT\n  c.id,\n  '${escapeSql(ts)}'::timestamp,\n  '${escapeSql(command)}',\n  ${valueSql},\n  'received'\nFROM component c\nWHERE c.code = '${componentCode}';`;\n\nmsg.query = sql;\nmsg.topic = sql;\nreturn msg;\n",
+    "func": "const payload = msg.payload;\n\nfunction escapeSql(value) {\n    return String(value).replace(/'/g, \"''\");\n}\n\nif (!payload || typeof payload !== \"object\") {\n    msg.payload = \"Invalid command payload. Expected JSON object.\";\n    return null;\n}\n\nconst componentMap = {\n    \"battery\": \"BAT1\",\n    \"pv\": \"PV1\",\n    \"pvpcs\": \"PV1\",\n    \"ge\": \"GE1\",\n    \"fuel_cell\": \"FC1\",\n    \"fc\": \"FC1\",\n    \"grid\": \"PCC1\",\n    \"simulator\": \"MCCB1\"\n};\n\nconst mqttComponentId = String(payload.component_id || \"\");\nconst sqlComponentCode = componentMap[mqttComponentId] || mqttComponentId;\nconst componentCode = sqlComponentCode.replace(/'/g, \"''\");\nconst command = payload.command;\nconst ts = payload.ts || new Date().toISOString();\n\nif (!mqttComponentId || !command) {\n    msg.payload = \"Invalid command payload. component_id and command are required.\";\n    return null;\n}\n\nlet valueSql = \"NULL\";\nif (payload.value === \"on\") {\n    valueSql = \"1\";\n} else if (payload.value === \"off\") {\n    valueSql = \"0\";\n} else if (payload.value !== undefined && payload.value !== null && payload.value !== \"\") {\n    const numericValue = Number(payload.value);\n    valueSql = Number.isNaN(numericValue) ? \"NULL\" : String(numericValue);\n}\n\nconst sql = `INSERT INTO \"command\" (component_id, ts, command, value, status)\nSELECT\n  c.id,\n  '${escapeSql(ts)}'::timestamp,\n  '${escapeSql(command)}',\n  ${valueSql},\n  'received'\nFROM component c\nWHERE c.code = '${componentCode}';`;\n\nmsg.query = sql;\nmsg.topic = sql;\nreturn msg;\n",
     "outputs": 1,
     "noerr": 0,
     "initialize": "",
@@ -319,99 +319,6 @@
     "wires": []
   },
   {
-    "id": "ui_button_battery_on",
-    "type": "ui_button",
-    "z": "seda_lab_flow",
-    "name": "Battery ON",
-    "group": "ui_group_commands",
-    "order": 1,
-    "width": 3,
-    "height": 1,
-    "passthru": false,
-    "label": "Battery ON",
-    "tooltip": "",
-    "color": "",
-    "bgcolor": "",
-    "className": "",
-    "icon": "",
-    "payload": "on",
-    "payloadType": "str",
-    "topic": "",
-    "topicType": "str",
-    "x": 160,
-    "y": 620,
-    "wires": [
-      [
-        "fn_build_ui_command"
-      ]
-    ]
-  },
-  {
-    "id": "ui_button_battery_off",
-    "type": "ui_button",
-    "z": "seda_lab_flow",
-    "name": "Battery OFF",
-    "group": "ui_group_commands",
-    "order": 2,
-    "width": 3,
-    "height": 1,
-    "passthru": false,
-    "label": "Battery OFF",
-    "tooltip": "",
-    "color": "",
-    "bgcolor": "",
-    "className": "",
-    "icon": "",
-    "payload": "off",
-    "payloadType": "str",
-    "topic": "",
-    "topicType": "str",
-    "x": 170,
-    "y": 680,
-    "wires": [
-      [
-        "fn_build_ui_command"
-      ]
-    ]
-  },
-  {
-    "id": "fn_build_ui_command",
-    "type": "function",
-    "z": "seda_lab_flow",
-    "name": "Build UI command",
-    "func": "const value = msg.payload === \"on\" ? \"on\" : \"off\";\nconst commandId = value === \"on\" ? \"cmd-ui-on\" : \"cmd-ui-off\";\n\nconst payload = {\n    command_id: commandId,\n    plant_id: \"mds\",\n    component_id: \"battery\",\n    command: \"set_status\",\n    value: value,\n    requested_by: \"nodered-console\",\n    ts: new Date().toISOString()\n};\n\nmsg.topic = `seda/plants/mds/components/battery/commands/${commandId}`;\nmsg.payload = JSON.stringify(payload);\nreturn msg;\n",
-    "outputs": 1,
-    "noerr": 0,
-    "initialize": "",
-    "finalize": "",
-    "libs": [],
-    "x": 430,
-    "y": 650,
-    "wires": [
-      [
-        "mqtt_out_ui_command"
-      ]
-    ]
-  },
-  {
-    "id": "mqtt_out_ui_command",
-    "type": "mqtt out",
-    "z": "seda_lab_flow",
-    "name": "Publish UI command",
-    "topic": "",
-    "qos": "0",
-    "retain": "",
-    "respTopic": "",
-    "contentType": "application/json",
-    "userProps": "",
-    "correl": "",
-    "expiry": "",
-    "broker": "mqtt_broker_mosquitto",
-    "x": 700,
-    "y": 650,
-    "wires": []
-  },
-  {
     "id": "ui_tab_seda_lab",
     "type": "ui_tab",
     "name": "SEDA-Lab",
@@ -426,7 +333,7 @@
     "tab": "ui_tab_seda_lab",
     "order": 1,
     "disp": true,
-    "width": "6",
+    "width": "8",
     "collapse": false,
     "className": ""
   },
@@ -855,6 +762,538 @@
     "headers": {},
     "x": 1300,
     "y": 960,
+    "wires": []
+  },
+  {
+    "id": "mqtt_in_state",
+    "type": "mqtt in",
+    "z": "seda_lab_flow",
+    "name": "MQTT state",
+    "topic": "seda/plants/+/components/+/state",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "mqtt_broker_mosquitto",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 560,
+    "wires": [
+      [
+        "fn_prepare_state"
+      ]
+    ]
+  },
+  {
+    "id": "fn_prepare_state",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build state insert",
+    "func": "const payload = msg.payload;\n\nif (!payload || typeof payload !== \"object\") {\n    msg.payload = \"Invalid state payload. Expected JSON object.\";\n    return null;\n}\n\nconst componentMap = {\n    \"battery\": \"BAT1\",\n    \"pv\": \"PV1\",\n    \"grid\": \"PCC1\",\n    \"simulator\": \"MCCB1\",\n    \"BAT1\": \"BAT1\",\n    \"PV1\": \"PV1\",\n    \"GE1\": \"GE1\",\n    \"FC1\": \"FC1\",\n    \"MCCB1\": \"MCCB1\",\n    \"BUS1\": \"BUS1\",\n    \"PCC1\": \"PCC1\",\n    \"COOL1\": \"COOL1\"\n};\n\nconst mqttComponentId = String(payload.component_id || \"\");\nconst componentCode = componentMap[mqttComponentId];\nconst state = String(payload.state || \"\");\nconst ts = payload.timestamp || new Date().toISOString();\n\nif (!componentCode || !state) {\n    msg.payload = `Invalid state payload. component_id/state not mapped: ${mqttComponentId}`;\n    return null;\n}\n\nmsg.query = `INSERT INTO state (component_id, ts, state)\nSELECT c.id, $2::timestamptz, $3::text\nFROM component c\nWHERE c.code = $1::text\nRETURNING id, component_id, ts, state;`;\nmsg.params = [componentCode, ts, state];\nmsg.payload = {\n    mqtt: payload,\n    sql_component_code: componentCode,\n    state: state\n};\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 560,
+    "wires": [
+      [
+        "postgres_insert_state"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_insert_state",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "Insert state",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 680,
+    "y": 560,
+    "wires": [
+      [
+        "debug_state_insert_result"
+      ]
+    ]
+  },
+  {
+    "id": "debug_state_insert_result",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "STATE INSERT RESULT",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "pgsql.rowCount",
+    "statusType": "msg",
+    "x": 940,
+    "y": 560,
+    "wires": []
+  },
+  {
+    "id": "ui_button_cmd_ui_battery_start",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Battery START",
+    "group": "ui_group_commands",
+    "order": 1,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Battery START",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"battery\", \"command\": \"set_status\", \"value\": \"on\", \"command_id\": \"cmd-ui-battery-start\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 620,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_battery_stop",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Battery STOP",
+    "group": "ui_group_commands",
+    "order": 2,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Battery STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"battery\", \"command\": \"set_status\", \"value\": \"off\", \"command_id\": \"cmd-ui-battery-stop\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 320,
+    "y": 620,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_pvpcs_start",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "PVPCS START",
+    "group": "ui_group_commands",
+    "order": 3,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "PVPCS START",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"pv\", \"command\": \"set_status\", \"value\": \"on\", \"command_id\": \"cmd-ui-pvpcs-start\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 670,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_pvpcs_stop",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "PVPCS STOP",
+    "group": "ui_group_commands",
+    "order": 4,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "PVPCS STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"pv\", \"command\": \"set_status\", \"value\": \"off\", \"command_id\": \"cmd-ui-pvpcs-stop\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 320,
+    "y": 670,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_ge_start",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "GE START",
+    "group": "ui_group_commands",
+    "order": 5,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "GE START",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"ge\", \"command\": \"START\", \"command_id\": \"cmd-ui-ge-start\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 720,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_ge_stop",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "GE STOP",
+    "group": "ui_group_commands",
+    "order": 6,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "GE STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"ge\", \"command\": \"STOP\", \"command_id\": \"cmd-ui-ge-stop\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 320,
+    "y": 720,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fuel_cell_start",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fuel Cell START",
+    "group": "ui_group_commands",
+    "order": 7,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fuel Cell START",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"fuel_cell\", \"command\": \"START\", \"command_id\": \"cmd-ui-fuel-cell-start\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 770,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fuel_cell_stop",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fuel Cell STOP",
+    "group": "ui_group_commands",
+    "order": 8,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fuel Cell STOP",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"component_id\": \"fuel_cell\", \"command\": \"STOP\", \"command_id\": \"cmd-ui-fuel-cell-stop\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 320,
+    "y": 770,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_none",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault NONE",
+    "group": "ui_group_commands",
+    "order": 9,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault NONE",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-none\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"NONE\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 840,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_high_temperature",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault HIGH_TEMPERATURE",
+    "group": "ui_group_commands",
+    "order": 10,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault HIGH_TEMPERATURE",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-high-temperature\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"HIGH_TEMPERATURE\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 350,
+    "y": 840,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_low_voltage",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault LOW_VOLTAGE",
+    "group": "ui_group_commands",
+    "order": 11,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault LOW_VOLTAGE",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-low-voltage\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"LOW_VOLTAGE\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 890,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_high_voltage",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault HIGH_VOLTAGE",
+    "group": "ui_group_commands",
+    "order": 12,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault HIGH_VOLTAGE",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-high-voltage\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"HIGH_VOLTAGE\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 350,
+    "y": 890,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_low_frequency",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault LOW_FREQUENCY",
+    "group": "ui_group_commands",
+    "order": 13,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault LOW_FREQUENCY",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-low-frequency\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"LOW_FREQUENCY\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 940,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_high_frequency",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault HIGH_FREQUENCY",
+    "group": "ui_group_commands",
+    "order": 14,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault HIGH_FREQUENCY",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-high-frequency\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"HIGH_FREQUENCY\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 350,
+    "y": 940,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_cmd_ui_fault_grid_lost",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Fault GRID_LOST",
+    "group": "ui_group_commands",
+    "order": 15,
+    "width": 2,
+    "height": 1,
+    "passthru": false,
+    "label": "Fault GRID_LOST",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "{\"command_id\": \"cmd-ui-fault-grid-lost\", \"component_id\": \"simulator\", \"command\": \"set_fault\", \"value\": \"GRID_LOST\"}",
+    "payloadType": "json",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 990,
+    "wires": [
+      [
+        "fn_build_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "fn_build_ui_command_mds",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build Mesa del Sol UI command",
+    "func": "const command = msg.payload;\nif (!command || typeof command !== \"object\") {\n    return null;\n}\n\nconst commandId = command.command_id || `cmd-ui-${Date.now()}`;\nconst payload = {\n    command_id: commandId,\n    plant_id: \"mds\",\n    component_id: command.component_id,\n    command: command.command,\n    requested_by: \"nodered-console\",\n    ts: new Date().toISOString()\n};\n\nif (command.value !== undefined) {\n    payload.value = command.value;\n}\n\nmsg.topic = `seda/plants/mds/components/${payload.component_id}/commands/${commandId}`;\nmsg.payload = JSON.stringify(payload);\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 480,
+    "y": 760,
+    "wires": [
+      [
+        "mqtt_out_ui_command_mds"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_out_ui_command_mds",
+    "type": "mqtt out",
+    "z": "seda_lab_flow",
+    "name": "Publish Mesa del Sol UI command",
+    "topic": "",
+    "qos": "0",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "application/json",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker_mosquitto",
+    "x": 790,
+    "y": 760,
     "wires": []
   }
 ]

@@ -10,6 +10,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 
@@ -24,6 +30,12 @@ services:
       - "9001:9001"
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t seda/healthcheck -m ok"]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 
@@ -37,6 +49,12 @@ services:
     depends_on:
       - mosquitto
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:1880"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - seda_net
 
@@ -52,6 +70,12 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - seda_net
 
@@ -61,6 +85,12 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 
@@ -72,6 +102,12 @@ services:
       MQTT_PORT: 1883
     depends_on:
       - mosquitto
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os, socket; s=socket.create_connection((os.getenv('MQTT_HOST', 'mosquitto'), int(os.getenv('MQTT_PORT', '1883'))), 5); s.close()\""]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 
@@ -83,6 +119,12 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - node-exporter
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 
@@ -90,6 +132,12 @@ services:
     image: prom/node-exporter:latest
     ports:
       - "9100:9100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9100/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - seda_net
 

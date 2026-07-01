@@ -35,7 +35,7 @@
           "refId": "A"
         }
       ],
-      "title": "Latest commands",
+      "title": "Latest Commands",
       "type": "table"
     },
     {
@@ -44,19 +44,29 @@
         "uid": "seda_lab_postgresql"
       },
       "gridPos": {
-        "h": 6,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 10
       },
       "id": 2,
       "options": {
-        "content": "States",
-        "mode": "markdown"
+        "showHeader": true
       },
       "pluginVersion": "11.0.0",
-      "title": "Placeholder \"States\"",
-      "type": "text"
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT s.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", s.state AS \"state\" FROM state s JOIN component c ON c.id = s.component_id ORDER BY s.ts DESC LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest States",
+      "type": "table"
     }
   ],
   "refresh": "5s",
@@ -77,6 +87,6 @@
   "timezone": "browser",
   "title": "Commands & Operation",
   "uid": "commands-operation",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

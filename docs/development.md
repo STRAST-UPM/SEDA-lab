@@ -52,7 +52,7 @@ Cambiar estas variables es necesario cuando se quiera evitar credenciales por de
 1. Arrancar plataforma con `make start`.
 2. Probar endpoints con `make check`.
 3. Revisar dashboards en Grafana.
-4. Enviar un comando con `make seed-command`.
+4. Publicar seed operational commands con `make seed-command`.
 5. Revisar PostgreSQL con `docker compose exec postgres psql`.
 
 ## Observabilidad local

@@ -18,6 +18,12 @@ Documentacion para trabajar con SEDA-Lab Reference Platform 1.0:
 
 - [Desarrollo local](docs/development.md)
 - [Guia de desarrollo de practicas SEDA-Lab](docs/practice-development-guide.md)
+- [Reference Platform 1.0](docs/reference-platform-1.0.md)
+- [Arquitectura de referencia](docs/architecture-reference.md)
+- [Referencia de componentes](docs/component-reference.md)
+- [Guia de extension](docs/extension-guide.md)
+- [Analitica offline](docs/analytics-offline.md)
+- [Consultas SQL de ejemplo](sql/analytics_examples.sql)
 
 Comandos basicos:
 
@@ -27,6 +33,17 @@ make start
 make check
 make seed-command
 ```
+
+`make seed-command` publica seed operational commands sobre PVPCS, Battery y Simulator, usando los mismos topics y payloads que la consola Node-RED.
+
+## Analitica offline
+
+Reference Platform 1.0 usa PostgreSQL como base operacional, historico simple y soporte para analitica offline docente.
+
+Las consultas de ejemplo permiten trabajar con historicos, agregados, tendencias, calidad de datos, alarmas, comandos, estados y anomalias offline usando las variables reales Mesa del Sol.
+
+- Guia: [docs/analytics-offline.md](docs/analytics-offline.md)
+- SQL: [sql/analytics_examples.sql](sql/analytics_examples.sql)
 
 ## URLs
 
@@ -82,9 +99,9 @@ Actualmente funcionan:
 - Grafana con datasource PostgreSQL estable:
   - name: SEDA-Lab PostgreSQL
   - uid: seda_lab_postgresql
-- Dashboard minimo SEDA-Lab Telemetry con:
-  - Latest measurements
-  - Latest commands
+- Dashboard Commands & Operation con:
+  - Latest Commands
+  - Latest States
 - Adminer accesible para inspeccion SQL.
 
 Checklist de comprobacion:
@@ -186,14 +203,26 @@ http://localhost:1880/ui
 La consola incluye:
 
 - SEDA-Lab / Commands
-- Battery ON
-- Battery OFF
+- Battery START / STOP
+- PVPCS START / STOP
+- GE START / STOP
+- Fuel Cell START / STOP
+- Simulator Fault:
+  - NONE
+  - HIGH_TEMPERATURE
+  - LOW_VOLTAGE
+  - HIGH_VOLTAGE
+  - LOW_FREQUENCY
+  - HIGH_FREQUENCY
+  - GRID_LOST
 
 Para probar:
 
 1. Abrir http://localhost:1880/ui
-2. Pulsar `Battery OFF`
-3. Pulsar `Battery ON`
+2. Pulsar `Battery STOP`
+3. Pulsar `Battery START`
+4. Pulsar `Fault LOW_VOLTAGE`
+5. Pulsar `Fault NONE`
 
 Cada boton publica una orden MQTT hacia Mosquitto usando el broker existente `mosquitto:1883`. La orden entra por el flujo MQTT de comandos de Node-RED y queda persistida en PostgreSQL en la tabla `command`.
 
@@ -205,7 +234,7 @@ docker compose exec postgres psql -U seda -d seda_lab -c "select cmd.ts, c.code,
 
 Comprobar en Grafana:
 
-Dashboard Commands & Operation -> Latest commands
+Dashboard Commands & Operation -> Latest Commands
 
 ## R5 — Simulador docente Reference Platform 1.0
 
@@ -246,6 +275,19 @@ El simulador publica tambien estados MQTT en:
 seda/plants/mds/components/<component>/state
 ```
 
+Node-RED persiste esos estados en la tabla `state`, mapeando los identificadores MQTT operacionales a componentes SQL existentes:
+
+- `battery` -> `BAT1`
+- `pv` -> `PV1`
+- `grid` -> `PCC1`
+- `simulator` -> `MCCB1`
+
+Consultar ultimos estados:
+
+```bash
+docker compose exec postgres psql -U seda -d seda_lab -c "select s.ts, c.code, c.name, s.state from state s join component c on c.id = s.component_id order by s.ts desc limit 10;"
+```
+
 Ejemplo de payload:
 
 ```json
@@ -258,12 +300,16 @@ Ejemplo de payload:
 }
 ```
 
-Ordenes aceptadas:
+Ordenes operacionales publicadas por MQTT y persistidas por Node-RED:
 
 - `battery` / `set_status` / `on`
 - `battery` / `set_status` / `off`
 - `pv` / `set_status` / `on`
 - `pv` / `set_status` / `off`
+- `ge` / `START`
+- `ge` / `STOP`
+- `fuel_cell` / `START`
+- `fuel_cell` / `STOP`
 - `grid` / `connect`
 - `grid` / `disconnect`
 - `simulator` / `set_fault` / `NONE`
@@ -271,6 +317,7 @@ Ordenes aceptadas:
 - `simulator` / `set_fault` / `LOW_FREQUENCY`
 - `simulator` / `set_fault` / `HIGH_FREQUENCY`
 - `simulator` / `set_fault` / `LOW_VOLTAGE`
+- `simulator` / `set_fault` / `HIGH_VOLTAGE`
 - `simulator` / `set_fault` / `GRID_LOST`
 
 Este comportamiento no pretende ser un gemelo digital ni un modelo fisico completo. Es un simulador docente simple para comprobar telemetria, estados, ordenes, ACKs y persistencia dentro de SEDA-Lab.
@@ -303,6 +350,8 @@ Reference Platform 1.0 incluye reglas docentes de alarma en Node-RED basadas en 
 - `HIGH_FREQUENCY`: se dispara cuando `MG-LV-MSB_Frequency > 60.03`.
 - `LOW_VOLTAGE`: se dispara cuando `Receiving_Point_AC_Voltage < 478`.
 - `HIGH_VOLTAGE`: se dispara cuando `Receiving_Point_AC_Voltage > 488`.
+
+Estos umbrales se mantienen sincronizados manualmente con los percentiles de `simulator/calibration.json`: `p95`/`p05` para operacion normal y valores extremos docentes para fallos.
 
 Cuando una regla se dispara:
 
@@ -571,12 +620,10 @@ docker compose exec mosquitto mosquitto_pub -h localhost -t 'seda/plants/mds/com
 
 Comprobar en el dashboard:
 
-- panel Latest commands
-- panel Latest ACKs
-- panel Battery status / battery telemetry
+- panel Latest Commands
+- panel Latest States
 - aparecen las ordenes
-- aparecen ACKs si se registran
-- cambia la telemetria o la quality de bateria
+- aparecen los estados publicados por MQTT
 
 Parar servicios:
 

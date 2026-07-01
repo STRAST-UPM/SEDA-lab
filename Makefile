@@ -11,7 +11,7 @@ help:
 	@echo "  logs          Follow all service logs"
 	@echo "  check         Run platform checks"
 	@echo "  reset         Reset volumes and restart"
-	@echo "  seed-command  Publish sample ON/OFF commands"
+	@echo "  seed-command  Publish seed operational commands"
 	@echo "  grafana       Print Grafana URL"
 	@echo "  nodered       Print Node-RED URL"
 	@echo "  adminer       Print Adminer URL"

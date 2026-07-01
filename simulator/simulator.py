@@ -302,9 +302,9 @@ def current_values() -> dict:
     daylight = daylight_factor()
     grid_connected = grid_state == "CONNECTED" and fault_mode != "GRID_LOST"
 
-    pv_power = smooth_value("PVPCS_Active_Power", daylight, noise_ratio=0.02)
+    pvpcs_active_power = smooth_value("PVPCS_Active_Power", daylight, noise_ratio=0.02)
     if pv_state == "OFF":
-        pv_power = 0.0
+        pvpcs_active_power = 0.0
 
     battery_power = smooth_value("Battery_Active_Power", daylight, noise_ratio=0.05)
     if battery_state == "OFF":
@@ -337,7 +337,7 @@ def current_values() -> dict:
 
     return {
         "Battery_Active_Power": round(battery_power, 3),
-        "PVPCS_Active_Power": round(pv_power, 3),
+        "PVPCS_Active_Power": round(pvpcs_active_power, 3),
         "GE_Active_Power": round(ge_power, 3),
         "FC_Active_Power": round(fc_power, 3),
         "Island_mode_MCCB_Active_Power": round(mccb_power, 3),
