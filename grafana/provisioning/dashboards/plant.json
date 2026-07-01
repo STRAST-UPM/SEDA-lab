@@ -1,0 +1,191 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Latest measurements",
+      "type": "table",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT m.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", v.code AS \"variable_code\", v.name AS \"variable_name\", m.value AS \"value\", v.unit AS \"unit\", m.quality AS \"quality\" FROM measurement m JOIN component c ON c.id = m.component_id JOIN variable_catalog v ON v.id = m.variable_id ORDER BY m.ts DESC LIMIT 30;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Measurements over time",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT m.ts AS \"time\", m.value AS \"value\", v.code AS \"metric\" FROM measurement m JOIN variable_catalog v ON v.id = m.variable_id WHERE $__timeFilter(m.ts) ORDER BY m.ts;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Power variables",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT m.ts AS \"time\", m.value AS \"value\", v.code AS \"metric\" FROM measurement m JOIN variable_catalog v ON v.id = m.variable_id WHERE $__timeFilter(m.ts) AND v.code IN ('Battery_Active_Power', 'PVPCS_Active_Power', 'GE_Active_Power', 'FC_Active_Power', 'Island_mode_MCCB_Active_Power') ORDER BY m.ts;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Voltage and frequency",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT m.ts AS \"time\", m.value AS \"value\", v.code AS \"metric\" FROM measurement m JOIN variable_catalog v ON v.id = m.variable_id WHERE $__timeFilter(m.ts) AND v.code IN ('MG-LV-MSB_AC_Voltage', 'Receiving_Point_AC_Voltage', 'MG-LV-MSB_Frequency') ORDER BY m.ts;",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "seda-lab",
+    "reference-platform"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Plant Monitoring",
+  "uid": "plant-monitoring",
+  "version": 2,
+  "weekStart": ""
+}

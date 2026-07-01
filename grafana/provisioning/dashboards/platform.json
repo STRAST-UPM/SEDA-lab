@@ -1,0 +1,174 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"measurement_count\" FROM measurement;",
+          "refId": "A"
+        }
+      ],
+      "title": "Measurement count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT count(*) AS \"command_count\" FROM command;",
+          "refId": "A"
+        }
+      ],
+      "title": "Command count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 3,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT m.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", v.code AS \"variable_code\", v.name AS \"variable_name\", m.value AS \"value\", m.quality AS \"quality\" FROM measurement m JOIN component c ON c.id = m.component_id JOIN variable_catalog v ON v.id = m.variable_id ORDER BY m.ts DESC LIMIT 1;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest measurement",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 4,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT cmd.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", cmd.command AS \"command\", cmd.value AS \"value\", cmd.status AS \"status\" FROM command cmd JOIN component c ON c.id = cmd.component_id ORDER BY cmd.ts DESC LIMIT 1;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest command",
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "seda-lab",
+    "reference-platform"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SEDA Platform",
+  "uid": "seda-platform",
+  "version": 1,
+  "weekStart": ""
+}

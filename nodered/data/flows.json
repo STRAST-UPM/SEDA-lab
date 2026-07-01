@@ -1,0 +1,860 @@
+[
+  {
+    "id": "seda_lab_flow",
+    "type": "tab",
+    "label": "SEDA-Lab MQTT to PostgreSQL",
+    "disabled": false,
+    "info": "Recolector MQTT minimo hacia PostgreSQL."
+  },
+  {
+    "id": "mqtt_in_telemetry",
+    "type": "mqtt in",
+    "z": "seda_lab_flow",
+    "name": "MQTT telemetry",
+    "topic": "seda/plants/+/components/+/sensors/+/telemetry",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "mqtt_broker_mosquitto",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 100,
+    "wires": [
+      [
+        "debug_alarm_input",
+        "fn_prepare_measurement",
+        "fn_check_basic_alarms"
+      ]
+    ]
+  },
+  {
+    "id": "fn_prepare_measurement",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Validate telemetry",
+    "func": "const payload = msg.payload;\nconst required = [\"plant_id\", \"component_id\", \"sensor_id\", \"timestamp\", \"value\", \"unit\", \"quality\"];\n\nfor (const field of required) {\n    if (payload[field] === undefined || payload[field] === null || payload[field] === \"\") {\n        msg.payload = `Invalid telemetry payload. Missing field: ${field}`;\n        return [null, msg];\n    }\n}\n\nconst value = Number(payload.value);\nif (Number.isNaN(value)) {\n    msg.payload = \"Invalid telemetry payload. value must be numeric.\";\n    return [null, msg];\n}\n\nconst measuredAt = new Date(payload.timestamp);\nif (Number.isNaN(measuredAt.getTime())) {\n    msg.payload = \"Invalid telemetry payload. timestamp must be ISO-8601.\";\n    return [null, msg];\n}\n\n// Reference Platform 1.0 usa directamente variables reales Mesa del Sol.\n// El sensor_id MQTT debe coincidir con variable_catalog.code.\nconst allowedVariables = new Set([\n    \"Battery_Active_Power\",\n    \"PVPCS_Active_Power\",\n    \"GE_Active_Power\",\n    \"FC_Active_Power\",\n    \"Island_mode_MCCB_Active_Power\",\n    \"MG-LV-MSB_AC_Voltage\",\n    \"Receiving_Point_AC_Voltage\",\n    \"MG-LV-MSB_Frequency\",\n    \"Inlet_Temperature_of_Chilled_Water\",\n    \"Outlet_Temperature\"\n]);\n\nconst componentMap = {\n    \"BAT1\": \"BAT1\",\n    \"PV1\": \"PV1\",\n    \"GE1\": \"GE1\",\n    \"FC1\": \"FC1\",\n    \"MCCB1\": \"MCCB1\",\n    \"BUS1\": \"BUS1\",\n    \"PCC1\": \"PCC1\",\n    \"COOL1\": \"COOL1\"\n};\n\nconst componentCode = componentMap[String(payload.component_id || \"\")];\nconst variableCode = String(payload.sensor_id || \"\");\n\nif (!componentCode) {\n    msg.payload = `Telemetry component is not mapped to the SQL catalog: ${payload.component_id}`;\n    return [null, msg];\n}\n\nif (!allowedVariables.has(variableCode)) {\n    msg.payload = `Telemetry variable is not part of the Mesa del Sol Reference 1.0 catalog: ${variableCode}`;\n    return [null, msg];\n}\n\nmsg.query = `\ninsert into measurement (component_id, variable_id, ts, value, quality)\nselect c.id, vc.id, $3::timestamptz, $4::double precision, $5::text\nfrom component c\njoin variable_catalog vc on vc.code = $2::text\nwhere c.code = $1::text\nreturning id, component_id, variable_id, ts, value, quality;\n`;\n\nmsg.params = [\n    componentCode,\n    variableCode,\n    measuredAt.toISOString(),\n    value,\n    payload.quality\n];\n\nmsg.payload = {\n    mqtt: payload,\n    sql_component_code: componentCode,\n    sql_variable_code: variableCode\n};\n\nreturn [msg, null];\n",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 420,
+    "y": 100,
+    "wires": [
+      [
+        "postgres_insert_measurement"
+      ],
+      [
+        "debug_validation_error"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_insert_measurement",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "Insert measurement",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 700,
+    "y": 100,
+    "wires": [
+      [
+        "debug_postgres_result"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_in_command",
+    "type": "mqtt in",
+    "z": "seda_lab_flow",
+    "name": "MQTT command",
+    "topic": "seda/plants/+/components/+/commands/+",
+    "qos": "0",
+    "datatype": "utf8",
+    "broker": "mqtt_broker_mosquitto",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 220,
+    "wires": [
+      [
+        "debug_raw_command_mqtt",
+        "json_parse_command"
+      ]
+    ]
+  },
+  {
+    "id": "fn_prepare_command",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build command insert",
+    "func": "const payload = msg.payload;\n\nfunction escapeSql(value) {\n    return String(value).replace(/'/g, \"''\");\n}\n\nif (!payload || typeof payload !== \"object\") {\n    msg.payload = \"Invalid command payload. Expected JSON object.\";\n    return null;\n}\n\nconst componentMap = {\n    \"battery\": \"BAT1\",\n    \"pv\": \"PV1\",\n    \"grid\": \"PCC1\",\n    \"simulator\": \"MCCB1\"\n};\n\nconst mqttComponentId = String(payload.component_id || \"\");\nconst sqlComponentCode = componentMap[mqttComponentId] || mqttComponentId;\nconst componentCode = sqlComponentCode.replace(/'/g, \"''\");\nconst command = payload.command;\nconst ts = payload.ts || new Date().toISOString();\n\nif (!mqttComponentId || !command) {\n    msg.payload = \"Invalid command payload. component_id and command are required.\";\n    return null;\n}\n\nlet valueSql = \"NULL\";\nif (payload.value === \"on\") {\n    valueSql = \"1\";\n} else if (payload.value === \"off\") {\n    valueSql = \"0\";\n} else if (payload.value !== undefined && payload.value !== null && payload.value !== \"\") {\n    const numericValue = Number(payload.value);\n    valueSql = Number.isNaN(numericValue) ? \"NULL\" : String(numericValue);\n}\n\nconst sql = `INSERT INTO \"command\" (component_id, ts, command, value, status)\nSELECT\n  c.id,\n  '${escapeSql(ts)}'::timestamp,\n  '${escapeSql(command)}',\n  ${valueSql},\n  'received'\nFROM component c\nWHERE c.code = '${componentCode}';`;\n\nmsg.query = sql;\nmsg.topic = sql;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 710,
+    "y": 220,
+    "wires": [
+      [
+        "debug_command_insert_sql",
+        "postgres_insert_command"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_insert_command",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "Insert command",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 1000,
+    "y": 220,
+    "wires": [
+      [
+        "debug_command_insert_result"
+      ]
+    ]
+  },
+  {
+    "id": "debug_postgres_result",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "PostgreSQL result",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "pgsql.rowCount",
+    "statusType": "msg",
+    "x": 990,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "debug_validation_error",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "Validation error",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload",
+    "statusType": "msg",
+    "x": 720,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "catch_flow_errors",
+    "type": "catch",
+    "z": "seda_lab_flow",
+    "name": "Flow errors",
+    "scope": null,
+    "uncaught": false,
+    "x": 440,
+    "y": 520,
+    "wires": [
+      [
+        "debug_flow_errors"
+      ]
+    ]
+  },
+  {
+    "id": "debug_flow_errors",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "Flow error",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "error",
+    "targetType": "msg",
+    "statusVal": "error.message",
+    "statusType": "msg",
+    "x": 700,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "mqtt_broker_mosquitto",
+    "type": "mqtt-broker",
+    "name": "Mosquitto",
+    "broker": "mosquitto",
+    "port": "1883",
+    "clientid": "seda-lab-nodered",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "postgres_config_seda_lab",
+    "type": "postgreSQLConfig",
+    "name": "SEDA-Lab PostgreSQL",
+    "host": "postgres",
+    "hostFieldType": "str",
+    "port": 5432,
+    "portFieldType": "num",
+    "database": "seda_lab",
+    "databaseFieldType": "str",
+    "ssl": false,
+    "sslFieldType": "bool",
+    "applicationName": "seda-lab-nodered",
+    "applicationNameType": "str",
+    "max": 10,
+    "maxFieldType": "num",
+    "idle": 1000,
+    "idleFieldType": "num",
+    "connectionTimeout": 10000,
+    "connectionTimeoutFieldType": "num",
+    "user": "seda",
+    "userFieldType": "str",
+    "password": "seda",
+    "passwordFieldType": "str"
+  },
+  {
+    "id": "debug_raw_command_mqtt",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "RAW COMMAND MQTT",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload",
+    "statusType": "msg",
+    "x": 410,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "json_parse_command",
+    "type": "json",
+    "z": "seda_lab_flow",
+    "name": "Parse command JSON",
+    "property": "payload",
+    "action": "",
+    "pretty": false,
+    "x": 410,
+    "y": 220,
+    "wires": [
+      [
+        "fn_prepare_command"
+      ]
+    ]
+  },
+  {
+    "id": "debug_command_insert_sql",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "COMMAND INSERT SQL",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "topic",
+    "targetType": "msg",
+    "statusVal": "topic",
+    "statusType": "msg",
+    "x": 1000,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "debug_command_insert_result",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "COMMAND INSERT RESULT",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "pgsql.rowCount",
+    "statusType": "msg",
+    "x": 1270,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "ui_button_battery_on",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Battery ON",
+    "group": "ui_group_commands",
+    "order": 1,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "Battery ON",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "on",
+    "payloadType": "str",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 620,
+    "wires": [
+      [
+        "fn_build_ui_command"
+      ]
+    ]
+  },
+  {
+    "id": "ui_button_battery_off",
+    "type": "ui_button",
+    "z": "seda_lab_flow",
+    "name": "Battery OFF",
+    "group": "ui_group_commands",
+    "order": 2,
+    "width": 3,
+    "height": 1,
+    "passthru": false,
+    "label": "Battery OFF",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "payload": "off",
+    "payloadType": "str",
+    "topic": "",
+    "topicType": "str",
+    "x": 170,
+    "y": 680,
+    "wires": [
+      [
+        "fn_build_ui_command"
+      ]
+    ]
+  },
+  {
+    "id": "fn_build_ui_command",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build UI command",
+    "func": "const value = msg.payload === \"on\" ? \"on\" : \"off\";\nconst commandId = value === \"on\" ? \"cmd-ui-on\" : \"cmd-ui-off\";\n\nconst payload = {\n    command_id: commandId,\n    plant_id: \"mds\",\n    component_id: \"battery\",\n    command: \"set_status\",\n    value: value,\n    requested_by: \"nodered-console\",\n    ts: new Date().toISOString()\n};\n\nmsg.topic = `seda/plants/mds/components/battery/commands/${commandId}`;\nmsg.payload = JSON.stringify(payload);\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 650,
+    "wires": [
+      [
+        "mqtt_out_ui_command"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_out_ui_command",
+    "type": "mqtt out",
+    "z": "seda_lab_flow",
+    "name": "Publish UI command",
+    "topic": "",
+    "qos": "0",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "application/json",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker_mosquitto",
+    "x": 700,
+    "y": 650,
+    "wires": []
+  },
+  {
+    "id": "ui_tab_seda_lab",
+    "type": "ui_tab",
+    "name": "SEDA-Lab",
+    "icon": "dashboard",
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "ui_group_commands",
+    "type": "ui_group",
+    "name": "Commands",
+    "tab": "ui_tab_seda_lab",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "fn_check_basic_alarms",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Check basic alarms",
+    "func": "const payload = msg.payload;\n\nfunction escapeSql(value) {\n    return String(value).replace(/'/g, \"''\");\n}\n\nif (!payload || typeof payload !== \"object\") {\n    return [null, null];\n}\n\nconst value = Number(payload.value);\nif (Number.isNaN(value)) {\n    return [null, null];\n}\n\nconst componentCode = String(payload.component_id || \"\");\nconst variableCode = String(payload.sensor_id || \"\");\nconst rules = {\n    \"Outlet_Temperature\": {\n        alarmCode: \"HIGH_OUTLET_TEMPERATURE\",\n        triggered: value > 30,\n        message: `Outlet_Temperature is high: ${value} ${payload.unit || \"\"}`\n    },\n    \"MG-LV-MSB_Frequency_LOW\": {\n        alarmCode: \"LOW_FREQUENCY\",\n        triggered: variableCode === \"MG-LV-MSB_Frequency\" && value < 59.97,\n        message: `MG-LV-MSB_Frequency is low: ${value} ${payload.unit || \"\"}`\n    },\n    \"MG-LV-MSB_Frequency_HIGH\": {\n        alarmCode: \"HIGH_FREQUENCY\",\n        triggered: variableCode === \"MG-LV-MSB_Frequency\" && value > 60.03,\n        message: `MG-LV-MSB_Frequency is high: ${value} ${payload.unit || \"\"}`\n    },\n    \"Receiving_Point_AC_Voltage_LOW\": {\n        alarmCode: \"LOW_VOLTAGE\",\n        triggered: variableCode === \"Receiving_Point_AC_Voltage\" && value < 478,\n        message: `Receiving_Point_AC_Voltage is low: ${value} ${payload.unit || \"\"}`\n    },\n    \"Receiving_Point_AC_Voltage_HIGH\": {\n        alarmCode: \"HIGH_VOLTAGE\",\n        triggered: variableCode === \"Receiving_Point_AC_Voltage\" && value > 488,\n        message: `Receiving_Point_AC_Voltage is high: ${value} ${payload.unit || \"\"}`\n    }\n};\n\nconst candidates = [];\nif (rules[variableCode]) {\n    candidates.push(rules[variableCode]);\n}\nif (variableCode === \"MG-LV-MSB_Frequency\") {\n    candidates.push(rules[\"MG-LV-MSB_Frequency_LOW\"], rules[\"MG-LV-MSB_Frequency_HIGH\"]);\n}\nif (variableCode === \"Receiving_Point_AC_Voltage\") {\n    candidates.push(rules[\"Receiving_Point_AC_Voltage_LOW\"], rules[\"Receiving_Point_AC_Voltage_HIGH\"]);\n}\n\nconst rule = candidates.find(candidate => candidate && candidate.triggered);\nif (!rule) {\n    return [null, null];\n}\n\nconst ts = payload.timestamp || new Date().toISOString();\nconst alarmSql = `INSERT INTO alarm (component_id, ts, severity, code, message)\nSELECT\n  c.id,\n  '${escapeSql(ts)}'::timestamp,\n  'warning',\n  '${escapeSql(rule.alarmCode)}',\n  '${escapeSql(rule.message)}'\nFROM component c\nWHERE c.code = '${escapeSql(componentCode)}'\n  AND NOT EXISTS (\n    SELECT 1\n    FROM alarm a\n    WHERE a.component_id = c.id\n      AND a.code = '${escapeSql(rule.alarmCode)}'\n      AND a.ts >= '${escapeSql(ts)}'::timestamp - interval '60 seconds'\n  )\nRETURNING id, component_id, ts, severity, code, message;`;\n\nconst sqlMsg = {\n    ...msg,\n    query: alarmSql,\n    topic: alarmSql,\n    payload: {\n        alarm_code: rule.alarmCode,\n        component_code: componentCode,\n        variable_code: variableCode,\n        value: value\n    }\n};\n\nconst mqttPayload = {\n    plant_id: payload.plant_id || \"mds\",\n    alarm_code: rule.alarmCode,\n    severity: \"warning\",\n    component_id: componentCode,\n    variable_id: variableCode,\n    value: value,\n    ts: ts\n};\n\nconst mqttMsg = {\n    topic: `seda/plants/mds/alarms/${rule.alarmCode}`,\n    payload: JSON.stringify(mqttPayload)\n};\n\nreturn [sqlMsg, mqttMsg];\n",
+    "outputs": 2,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 340,
+    "wires": [
+      [
+        "debug_alarm_detected",
+        "debug_alarm_insert_sql",
+        "postgres_insert_alarm"
+      ],
+      [
+        "mqtt_out_alarm"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_insert_alarm",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "Insert alarm",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 690,
+    "y": 320,
+    "wires": [
+      [
+        "debug_alarm_insert_result"
+      ]
+    ]
+  },
+  {
+    "id": "mqtt_out_alarm",
+    "type": "mqtt out",
+    "z": "seda_lab_flow",
+    "name": "Publish alarm",
+    "topic": "",
+    "qos": "0",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "application/json",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "mqtt_broker_mosquitto",
+    "x": 690,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "debug_alarm_insert_result",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "ALARM INSERT RESULT",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "pgsql.rowCount",
+    "statusType": "msg",
+    "x": 960,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "debug_alarm_input",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "ALARM INPUT",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload",
+    "statusType": "msg",
+    "x": 420,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "debug_alarm_detected",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "ALARM DETECTED",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload.alarm_code",
+    "statusType": "msg",
+    "x": 690,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "debug_alarm_insert_sql",
+    "type": "debug",
+    "z": "seda_lab_flow",
+    "name": "ALARM INSERT SQL",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": true,
+    "complete": "topic",
+    "targetType": "msg",
+    "statusVal": "topic",
+    "statusType": "msg",
+    "x": 690,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "http_in_seda_status",
+    "type": "http in",
+    "z": "seda_lab_flow",
+    "name": "GET /seda/status",
+    "url": "/seda/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 170,
+    "y": 780,
+    "wires": [
+      [
+        "fn_http_status"
+      ]
+    ]
+  },
+  {
+    "id": "fn_http_status",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build status response",
+    "func": "msg.statusCode = 200;\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = JSON.stringify({\n    platform: \"SEDA-Lab\",\n    version: \"reference-1.0\",\n    status: \"ok\"\n});\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 780,
+    "wires": [
+      [
+        "http_response_status"
+      ]
+    ]
+  },
+  {
+    "id": "http_response_status",
+    "type": "http response",
+    "z": "seda_lab_flow",
+    "name": "HTTP status response",
+    "statusCode": "",
+    "headers": {},
+    "x": 700,
+    "y": 780,
+    "wires": []
+  },
+  {
+    "id": "http_in_latest_measurements",
+    "type": "http in",
+    "z": "seda_lab_flow",
+    "name": "GET /seda/latest-measurements",
+    "url": "/seda/latest-measurements",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 210,
+    "y": 840,
+    "wires": [
+      [
+        "fn_query_latest_measurements"
+      ]
+    ]
+  },
+  {
+    "id": "fn_query_latest_measurements",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Query latest measurements",
+    "func": "msg.query = `SELECT\n  m.ts,\n  c.code AS component_code,\n  c.name AS component_name,\n  v.code AS variable_code,\n  v.name AS variable_name,\n  m.value,\n  m.quality\nFROM measurement m\nJOIN component c ON c.id = m.component_id\nJOIN variable_catalog v ON v.id = m.variable_id\nORDER BY m.ts DESC\nLIMIT 10;`;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 500,
+    "y": 840,
+    "wires": [
+      [
+        "postgres_http_latest_measurements"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_http_latest_measurements",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "HTTP latest measurements",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 790,
+    "y": 840,
+    "wires": [
+      [
+        "fn_http_json_rows_measurements"
+      ]
+    ]
+  },
+  {
+    "id": "fn_http_json_rows_measurements",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build measurements JSON",
+    "func": "const rows = Array.isArray(msg.payload)\n    ? msg.payload\n    : (msg.payload && Array.isArray(msg.payload.rows) ? msg.payload.rows : []);\nmsg.statusCode = 200;\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = JSON.stringify(rows);\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1080,
+    "y": 840,
+    "wires": [
+      [
+        "http_response_measurements"
+      ]
+    ]
+  },
+  {
+    "id": "http_response_measurements",
+    "type": "http response",
+    "z": "seda_lab_flow",
+    "name": "HTTP measurements response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1370,
+    "y": 840,
+    "wires": []
+  },
+  {
+    "id": "http_in_latest_commands",
+    "type": "http in",
+    "z": "seda_lab_flow",
+    "name": "GET /seda/latest-commands",
+    "url": "/seda/latest-commands",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 200,
+    "y": 900,
+    "wires": [
+      [
+        "fn_query_latest_commands"
+      ]
+    ]
+  },
+  {
+    "id": "fn_query_latest_commands",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Query latest commands",
+    "func": "msg.query = `SELECT\n  cmd.ts,\n  c.code AS component_code,\n  c.name AS component_name,\n  cmd.command,\n  cmd.value,\n  cmd.status\nFROM command cmd\nJOIN component c ON c.id = cmd.component_id\nORDER BY cmd.ts DESC\nLIMIT 10;`;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 490,
+    "y": 900,
+    "wires": [
+      [
+        "postgres_http_latest_commands"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_http_latest_commands",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "HTTP latest commands",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 780,
+    "y": 900,
+    "wires": [
+      [
+        "fn_http_json_rows_commands"
+      ]
+    ]
+  },
+  {
+    "id": "fn_http_json_rows_commands",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build commands JSON",
+    "func": "const rows = Array.isArray(msg.payload)\n    ? msg.payload\n    : (msg.payload && Array.isArray(msg.payload.rows) ? msg.payload.rows : []);\nmsg.statusCode = 200;\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = JSON.stringify(rows);\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1070,
+    "y": 900,
+    "wires": [
+      [
+        "http_response_commands"
+      ]
+    ]
+  },
+  {
+    "id": "http_response_commands",
+    "type": "http response",
+    "z": "seda_lab_flow",
+    "name": "HTTP commands response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1350,
+    "y": 900,
+    "wires": []
+  },
+  {
+    "id": "http_in_latest_alarms",
+    "type": "http in",
+    "z": "seda_lab_flow",
+    "name": "GET /seda/latest-alarms",
+    "url": "/seda/latest-alarms",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 190,
+    "y": 960,
+    "wires": [
+      [
+        "fn_query_latest_alarms"
+      ]
+    ]
+  },
+  {
+    "id": "fn_query_latest_alarms",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Query latest alarms",
+    "func": "msg.query = `SELECT\n  a.ts,\n  c.code AS component_code,\n  c.name AS component_name,\n  a.severity,\n  a.code AS alarm_code,\n  a.message\nFROM alarm a\nJOIN component c ON c.id = a.component_id\nORDER BY a.ts DESC\nLIMIT 10;`;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 480,
+    "y": 960,
+    "wires": [
+      [
+        "postgres_http_latest_alarms"
+      ]
+    ]
+  },
+  {
+    "id": "postgres_http_latest_alarms",
+    "type": "postgresql",
+    "z": "seda_lab_flow",
+    "name": "HTTP latest alarms",
+    "query": "",
+    "postgreSQLConfig": "postgres_config_seda_lab",
+    "split": false,
+    "rowsPerMsg": "1",
+    "outputs": 1,
+    "x": 760,
+    "y": 960,
+    "wires": [
+      [
+        "fn_http_json_rows_alarms"
+      ]
+    ]
+  },
+  {
+    "id": "fn_http_json_rows_alarms",
+    "type": "function",
+    "z": "seda_lab_flow",
+    "name": "Build alarms JSON",
+    "func": "const rows = Array.isArray(msg.payload)\n    ? msg.payload\n    : (msg.payload && Array.isArray(msg.payload.rows) ? msg.payload.rows : []);\nmsg.statusCode = 200;\nmsg.headers = { \"Content-Type\": \"application/json\" };\nmsg.payload = JSON.stringify(rows);\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 960,
+    "wires": [
+      [
+        "http_response_alarms"
+      ]
+    ]
+  },
+  {
+    "id": "http_response_alarms",
+    "type": "http response",
+    "z": "seda_lab_flow",
+    "name": "HTTP alarms response",
+    "statusCode": "",
+    "headers": {},
+    "x": 1300,
+    "y": 960,
+    "wires": []
+  }
+]

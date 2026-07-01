@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: SEDA-Lab Prometheus
+    uid: seda_lab_prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: true
+    isDefault: false

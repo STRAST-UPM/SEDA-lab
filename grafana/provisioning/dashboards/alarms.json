@@ -1,0 +1,62 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "showHeader": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "format": "table",
+          "rawSql": "SELECT a.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", a.severity AS \"severity\", a.code AS \"alarm_code\", a.message AS \"message\" FROM alarm a JOIN component c ON c.id = a.component_id WHERE a.code IN ('HIGH_OUTLET_TEMPERATURE', 'LOW_FREQUENCY', 'HIGH_FREQUENCY', 'LOW_VOLTAGE', 'HIGH_VOLTAGE') ORDER BY a.ts DESC LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest alarms",
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "seda-lab",
+    "reference-platform"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Alarms",
+  "uid": "alarms",
+  "version": 3,
+  "weekStart": ""
+}

@@ -1,0 +1,85 @@
+{
+  "source": "Mesa del Sol percentiles p01/p05/p50/p95/p99 / SEDA-Lab Reference Platform 1.0",
+  "variables": {
+    "Battery_Active_Power": {
+      "unit": "kW",
+      "p01": -18.8,
+      "p05": -0.6,
+      "p50": -0.1,
+      "p95": 0.1,
+      "p99": 0.2
+    },
+    "PVPCS_Active_Power": {
+      "unit": "kW",
+      "p01": -1.0,
+      "p05": -1.0,
+      "p50": 0.0,
+      "p95": 39.0,
+      "p99": 43.0
+    },
+    "GE_Active_Power": {
+      "unit": "kW",
+      "p01": -1.7,
+      "p05": -1.5,
+      "p50": -0.7,
+      "p95": 137.0,
+      "p99": 232.0
+    },
+    "FC_Active_Power": {
+      "unit": "kW",
+      "p01": -6.0,
+      "p05": -1.0,
+      "p50": 37.0,
+      "p95": 38.0,
+      "p99": 42.0
+    },
+    "Island_mode_MCCB_Active_Power": {
+      "unit": "kW",
+      "p01": -239.0,
+      "p05": -159.0,
+      "p50": -26.0,
+      "p95": 21.0,
+      "p99": 26.0
+    },
+    "MG-LV-MSB_AC_Voltage": {
+      "unit": "V",
+      "p01": 476.0,
+      "p05": 478.0,
+      "p50": 484.0,
+      "p95": 490.0,
+      "p99": 492.0
+    },
+    "Receiving_Point_AC_Voltage": {
+      "unit": "V",
+      "p01": 476.0,
+      "p05": 478.0,
+      "p50": 484.0,
+      "p95": 488.0,
+      "p99": 490.0
+    },
+    "MG-LV-MSB_Frequency": {
+      "unit": "Hz",
+      "p01": 59.96,
+      "p05": 59.97,
+      "p50": 60.0,
+      "p95": 60.03,
+      "p99": 60.04
+    },
+    "Inlet_Temperature_of_Chilled_Water": {
+      "unit": "degC",
+      "p01": 7.0,
+      "p05": 7.7,
+      "p50": 19.1,
+      "p95": 30.6,
+      "p99": 32.6
+    },
+    "Outlet_Temperature": {
+      "unit": "degC",
+      "p01": 8.9,
+      "p05": 10.1,
+      "p50": 18.0,
+      "p95": 28.7,
+      "p99": 30.9
+    }
+  }
+}

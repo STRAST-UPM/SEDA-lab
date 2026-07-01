@@ -1,0 +1,23 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: SEDA-Lab PostgreSQL
+    orgId: 1
+
+datasources:
+  - name: SEDA-Lab PostgreSQL
+    uid: seda_lab_postgresql
+    orgId: 1
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: seda
+    secureJsonData:
+      password: seda
+    jsonData:
+      database: seda_lab
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+    editable: true
+    isDefault: true
