@@ -17,14 +17,11 @@ docker compose ps
 Documentacion para trabajar con SEDA-Lab Reference Platform 1.0:
 
 - [Desarrollo local](docs/development.md)
-- [Guia de desarrollo de practicas SEDA-Lab](docs/practice-development-guide.md)
 - [Reference Platform 1.0](docs/reference-platform-1.0.md)
 - [Arquitectura de referencia](docs/architecture-reference.md)
 - [Referencia de componentes](docs/component-reference.md)
-- [Guia de extension](docs/extension-guide.md)
 - [Analitica offline](docs/analytics-offline.md)
 - [Consultas SQL de ejemplo](sql/analytics_examples.sql)
-- [Derivacion de Student Platform](docs/student-platform-derivation.md)
 
 Comandos basicos:
 
@@ -36,26 +33,6 @@ make seed-command
 ```
 
 `make seed-command` publica seed operational commands sobre PVPCS, Battery y Simulator, usando los mismos topics y payloads que la consola Node-RED.
-
-## Derivacion de Student Platform
-
-Reference Platform 1.0 es privada y contiene la solucion completa. No debe publicarse como repositorio de alumnos.
-
-Para generar la version de partida para estudiantes:
-
-```bash
-bash scripts/build-student-platform.sh
-```
-
-El resultado se crea en:
-
-```text
-../seda-lab-student
-```
-
-Antes de publicar Student Platform debe revisarse manualmente que no contiene flows Node-RED de solucion, dashboards completos, consultas analiticas resueltas, documentacion interna ni datasets grandes.
-
-La guia completa esta en [docs/student-platform-derivation.md](docs/student-platform-derivation.md).
 
 ## Analitica offline
 
