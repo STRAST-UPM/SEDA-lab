@@ -140,7 +140,7 @@ services:
   # The broker's traffic, as a subscriber sees it: every message on seda/#
   # becomes a counter per topic, and every numeric field a gauge.
   mqtt-exporter:
-    image: kpetrem/mqtt-exporter:latest
+    image: kpetrem/mqtt-exporter:1.12.1
     environment:
       MQTT_ADDRESS: mosquitto
       MQTT_TOPIC: "seda/#"
@@ -148,7 +148,10 @@ services:
     ports:
       - "9344:9344"
     depends_on:
-      - mosquitto
+      mosquitto:
+        condition: service_healthy
+    # It connects once at start-up and exits if the broker is not there yet.
+    restart: unless-stopped
     networks:
       - seda_net
 
