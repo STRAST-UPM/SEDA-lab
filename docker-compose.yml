@@ -113,7 +113,7 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - node-exporter
-      - blackbox-exporter
+      - mqtt-exporter
       - sql-exporter
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready"]
@@ -137,18 +137,18 @@ services:
     networks:
       - seda_net
 
-  blackbox-exporter:
-    image: prom/blackbox-exporter:latest
+  # The broker's traffic, as a subscriber sees it: every message on seda/#
+  # becomes a counter per topic, and every numeric field a gauge.
+  mqtt-exporter:
+    image: kpetrem/mqtt-exporter:latest
+    environment:
+      MQTT_ADDRESS: mosquitto
+      MQTT_TOPIC: "seda/#"
+      PROMETHEUS_PORT: "9344"
     ports:
-      - "9115:9115"
-    volumes:
-      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:9115/-/healthy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - "9344:9344"
+    depends_on:
+      - mosquitto
     networks:
       - seda_net
 

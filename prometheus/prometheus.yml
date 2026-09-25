@@ -21,26 +21,8 @@ scrape_configs:
     static_configs:
       - targets: ["sql-exporter:9399"]
 
-  # Node-RED's REST interface, from the outside: does it answer, and how fast?
-  - job_name: "probe-http"
-    metrics_path: /probe
-    params:
-      module: [http_2xx]
+  # The broker's traffic, from a subscriber on seda/#: messages per topic
+  # (mqtt_message_total) and the last numeric value per topic (mqtt_value).
+  - job_name: "broker"
     static_configs:
-      - targets: ["http://nodered:1880/seda/status"]
-    relabel_configs: &probe
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: blackbox-exporter:9115
-
-  # The broker and the database, from the outside: do they accept connections?
-  - job_name: "probe-tcp"
-    metrics_path: /probe
-    params:
-      module: [tcp_connect]
-    static_configs:
-      - targets: ["mosquitto:1883", "postgres:5432"]
-    relabel_configs: *probe
+      - targets: ["mqtt-exporter:9344"]
