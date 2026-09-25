@@ -1,0 +1,11 @@
+# Extra metrics computed inside PostgreSQL by the postgres exporter.
+# Each query becomes metrics named <query name>_<column>.
+seda_measurement:
+  query: |
+    SELECT
+      EXTRACT(EPOCH FROM (now() AT TIME ZONE 'UTC') - max(ts)) AS newest_age_seconds
+    FROM measurement
+  metrics:
+    - newest_age_seconds:
+        usage: "GAUGE"
+        description: "Seconds between now and the newest measurement timestamp (the publisher's clock)"
