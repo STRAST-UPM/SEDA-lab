@@ -15,10 +15,11 @@ scrape_configs:
     static_configs:
       - targets: ["grafana:3000"]
 
-  # PostgreSQL, from the inside: connections, table activity, data freshness.
-  - job_name: "postgres"
+  # The platform's data, from the inside: SQL queries in prometheus/sql_exporter.yml
+  # (freshness of the newest measurement, rows inserted per table, connections).
+  - job_name: "database"
     static_configs:
-      - targets: ["postgres-exporter:9187"]
+      - targets: ["sql-exporter:9399"]
 
   # Node-RED's REST interface, from the outside: does it answer, and how fast?
   - job_name: "probe-http"

@@ -114,7 +114,7 @@ services:
     depends_on:
       - node-exporter
       - blackbox-exporter
-      - postgres-exporter
+      - sql-exporter
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready"]
       interval: 10s
@@ -152,26 +152,18 @@ services:
     networks:
       - seda_net
 
-  postgres-exporter:
-    image: quay.io/prometheuscommunity/postgres-exporter:latest
-    command: ["--extend.query-path=/etc/postgres-exporter/queries.yml"]
-    environment:
-      DATA_SOURCE_URI: postgres:5432/${POSTGRES_DB}?sslmode=disable
-      DATA_SOURCE_USER: ${POSTGRES_USER}
-      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD}
+  sql-exporter:
+    image: burningalchemist/sql_exporter:latest
+    command:
+      - "-config.file=/etc/sql_exporter/sql_exporter.yml"
+      - "-config.data-source-name=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
     ports:
-      - "9187:9187"
+      - "9399:9399"
     volumes:
-      - ./prometheus/postgres-queries.yml:/etc/postgres-exporter/queries.yml:ro
+      - ./prometheus/sql_exporter.yml:/etc/sql_exporter/sql_exporter.yml:ro
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:9187/metrics"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     networks:
       - seda_net
 

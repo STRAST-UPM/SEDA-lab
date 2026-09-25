@@ -1,0 +1,40 @@
+# SQL exporter: every metric below is an SQL query run against seda_lab when
+# Prometheus scrapes. Read a metric and you can read exactly how it is computed.
+global:
+  scrape_timeout: 10s
+  scrape_timeout_offset: 500ms
+  min_interval: 0s
+  max_connections: 2
+  max_idle_connections: 1
+
+target:
+  # Overridden in docker-compose.yml from the .env values.
+  data_source_name: "postgres://seda:seda@postgres:5432/seda_lab?sslmode=disable"
+  collectors: [seda]
+
+collectors:
+  - collector_name: seda
+    metrics:
+      - metric_name: seda_measurement_newest_age_seconds
+        type: gauge
+        help: "Seconds between now and the newest measurement timestamp. The timestamp is the publisher's."
+        values: [age]
+        query: |
+          SELECT EXTRACT(EPOCH FROM (now() AT TIME ZONE 'UTC') - max(ts)) AS age FROM measurement
+
+      - metric_name: seda_rows_inserted_total
+        type: counter
+        help: "Rows ever inserted into a platform table (PostgreSQL's own statistics)."
+        key_labels: [table]
+        values: [inserted]
+        query: |
+          SELECT relname AS table, n_tup_ins AS inserted
+          FROM pg_stat_user_tables
+          WHERE relname IN ('measurement', 'alarm', 'command', 'state')
+
+      - metric_name: seda_db_connections
+        type: gauge
+        help: "Open connections to the seda_lab database."
+        values: [connections]
+        query: |
+          SELECT count(*) AS connections FROM pg_stat_activity WHERE datname = 'seda_lab'
