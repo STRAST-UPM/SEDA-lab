@@ -1,174 +1,236 @@
 {
-  "annotations": {
-    "list": []
-  },
+  "uid": "seda-platform",
+  "title": "Platform",
+  "schemaVersion": 39,
   "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
   "panels": [
     {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Processor by service (cores)",
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "seda_lab_postgresql"
+        "type": "prometheus",
+        "uid": "seda_lab_prometheus"
       },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seda_lab_prometheus"
+          },
+          "refId": "A",
+          "expr": "sum by (service) (rate(container_cpu_usage_seconds_total[1m]))",
+          "legendFormat": "{{service}}"
+        }
+      ],
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 0
       },
-      "id": 1,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
         },
-        "textMode": "auto"
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Memory by service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "seda_lab_prometheus"
       },
-      "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "seda_lab_postgresql"
+            "type": "prometheus",
+            "uid": "seda_lab_prometheus"
           },
-          "format": "table",
-          "rawSql": "SELECT count(*) AS \"measurement_count\" FROM measurement;",
-          "refId": "A"
+          "refId": "A",
+          "expr": "sum by (service) (container_memory_working_set_bytes)",
+          "legendFormat": "{{service}}"
         }
       ],
-      "title": "Measurement count",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "seda_lab_postgresql"
-      },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 0
       },
-      "id": 2,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
         },
-        "textMode": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "seda_lab_postgresql"
-          },
-          "format": "table",
-          "rawSql": "SELECT count(*) AS \"command_count\" FROM command;",
-          "refId": "A"
-        }
-      ],
-      "title": "Command count",
-      "type": "stat"
+        "overrides": []
+      }
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "seda_lab_postgresql"
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 6
-      },
       "id": 3,
-      "options": {
-        "showHeader": true
+      "type": "timeseries",
+      "title": "Network received by service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "seda_lab_prometheus"
       },
-      "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "seda_lab_postgresql"
+            "type": "prometheus",
+            "uid": "seda_lab_prometheus"
           },
-          "format": "table",
-          "rawSql": "SELECT m.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", v.code AS \"variable_code\", v.name AS \"variable_name\", m.value AS \"value\", m.quality AS \"quality\" FROM measurement m JOIN component c ON c.id = m.component_id JOIN variable_catalog v ON v.id = m.variable_id ORDER BY m.ts DESC LIMIT 1;",
-          "refId": "A"
+          "refId": "A",
+          "expr": "sum by (service) (rate(container_network_receive_bytes_total[1m]))",
+          "legendFormat": "{{service}}"
         }
       ],
-      "title": "Latest measurement",
-      "type": "table"
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "seda_lab_postgresql"
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 15
-      },
       "id": 4,
-      "options": {
-        "showHeader": true
+      "type": "timeseries",
+      "title": "Network sent by service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "seda_lab_prometheus"
       },
-      "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "seda_lab_postgresql"
+            "type": "prometheus",
+            "uid": "seda_lab_prometheus"
           },
-          "format": "table",
-          "rawSql": "SELECT cmd.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", cmd.command AS \"command\", cmd.value AS \"value\", cmd.status AS \"status\" FROM command cmd JOIN component c ON c.id = cmd.component_id ORDER BY cmd.ts DESC LIMIT 1;",
-          "refId": "A"
+          "refId": "A",
+          "expr": "sum by (service) (rate(container_network_transmit_bytes_total[1m]))",
+          "legendFormat": "{{service}}"
         }
       ],
-      "title": "Latest command",
-      "type": "table"
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Scrape targets (up)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "seda_lab_prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "seda_lab_prometheus"
+          },
+          "refId": "A",
+          "expr": "up",
+          "legendFormat": "{{job}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true
+            }
+          }
+        }
+      ]
     }
   ],
-  "refresh": "5s",
-  "schemaVersion": 39,
-  "style": "dark",
   "tags": [
-    "seda-lab",
-    "reference-platform"
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "SEDA Platform",
-  "uid": "seda-platform",
-  "version": 1,
-  "weekStart": ""
+    "seda-block5"
+  ]
 }

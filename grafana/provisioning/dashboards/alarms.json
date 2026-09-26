@@ -1,62 +1,86 @@
 {
-  "annotations": {
-    "list": []
-  },
+  "uid": "alarms",
+  "title": "Alarms",
+  "schemaVersion": 39,
   "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timezone": "browser",
   "panels": [
     {
+      "id": 1,
+      "type": "text",
+      "title": "Two ways to alarm on the same data",
+      "options": {
+        "mode": "markdown",
+        "content": "**Left:** the alarms Node-RED records in the `alarm` table — one per rule breach, at most one a minute per code (deduplication).\n\n**Right:** the Grafana alert rules — evaluated on a clock, with a pending period and a decision about what to do when no data arrives."
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Node-RED alarms (newest first)",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
       },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "options": {
-        "showHeader": true
-      },
-      "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
             "uid": "seda_lab_postgresql"
           },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
           "format": "table",
-          "rawSql": "SELECT a.ts AS \"ts\", c.code AS \"component_code\", c.name AS \"component_name\", a.severity AS \"severity\", a.code AS \"alarm_code\", a.message AS \"message\" FROM alarm a JOIN component c ON c.id = a.component_id WHERE a.code IN ('HIGH_OUTLET_TEMPERATURE', 'LOW_FREQUENCY', 'HIGH_FREQUENCY', 'LOW_VOLTAGE', 'HIGH_VOLTAGE') ORDER BY a.ts DESC LIMIT 20;",
-          "refId": "A"
+          "rawSql": "SELECT a.ts AS \"time (UTC)\", c.code AS component, a.code AS alarm, a.severity, a.message FROM alarm a JOIN component c ON c.id = a.component_id ORDER BY a.ts DESC LIMIT 20"
         }
       ],
-      "title": "Latest alarms",
-      "type": "table"
+      "gridPos": {
+        "h": 12,
+        "w": 14,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "id": 3,
+      "type": "alertlist",
+      "title": "Grafana alert rules",
+      "datasource": null,
+      "targets": [],
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 14,
+        "y": 4
+      },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "maxItems": 20,
+        "sortOrder": 1,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": true,
+          "normal": true,
+          "error": true
+        }
+      }
     }
   ],
-  "refresh": "5s",
-  "schemaVersion": 39,
-  "style": "dark",
   "tags": [
-    "seda-lab",
-    "reference-platform"
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Alarms",
-  "uid": "alarms",
-  "version": 3,
-  "weekStart": ""
+    "seda-block5"
+  ]
 }

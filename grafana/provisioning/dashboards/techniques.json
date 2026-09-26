@@ -1,0 +1,792 @@
+{
+  "uid": "techniques",
+  "title": "Techniques",
+  "schemaVersion": 39,
+  "editable": true,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "1 · Every window is an editorial decision",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "Three windows, one signal",
+      "options": {
+        "mode": "markdown",
+        "content": "Generator-set active power as the **last sample**, the **mean over 1 minute** and the **mean over 15 minutes**.\n\nThe same machine, three stories: jumpy and honest, smooth and slightly late, calm and badly lagging. Which one answers *is the generator dropping now?* Which answers *how was the last hour?*"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Generator-set active power — three windows",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts AS time, value AS \"last sample\" FROM measurement WHERE variable_id = 3 AND $__timeFilter(ts) ORDER BY 1"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "B",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, v AS \"mean 1 min\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '1 minute' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '1 minute') s WHERE $__timeFilter(time) ORDER BY 1"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "C",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, v AS \"mean 15 min\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '15 minutes' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '15 minutes') s WHERE $__timeFilter(time) ORDER BY 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "row",
+      "title": "2 · Every current value carries its age",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "text",
+      "title": "A value and its age",
+      "options": {
+        "mode": "markdown",
+        "content": "The outlet temperature as it was **last received**, and **how long ago** that was. The age turns red after 30 s: the value beside it may no longer be true.\n\nCompare *Plant — as delivered*: its table shows the last values with no age at all."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Outlet temperature — last received",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT value AS \"°C\" FROM measurement WHERE variable_id = 10 ORDER BY ts DESC LIMIT 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 6,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "text"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "…received this many seconds ago",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT round(extract(epoch FROM ((now() AT TIME ZONE 'UTC') - max(ts)))::numeric, 0) AS \"age\" FROM measurement WHERE variable_id = 10 AND ts <= (now() AT TIME ZONE 'UTC')"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 30,
+                "color": "red"
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background_solid",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "3 · Deviation from normal; colour only for the abnormal",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "text",
+      "title": "The normal band",
+      "options": {
+        "mode": "markdown",
+        "content": "The real plant's outlet temperature: median **18.0 °C**, 95th percentile **28.7 °C** (`simulator/calibration.json`). The rule in Node-RED fires above **30 °C**.\n\nThe line is grey while normal. Colour appears only above p95 (orange) and above the rule (red): the appearance of colour is itself the signal (ISA-101)."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Outlet temperature against its normal band",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts AS time, value AS \"outlet °C\" FROM measurement WHERE variable_id = 10 AND $__timeFilter(ts) ORDER BY 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 19
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "transparent"
+              },
+              {
+                "value": 28.7,
+                "color": "orange"
+              },
+              {
+                "value": 30,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 1,
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "4 · Level and rate of change",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "text",
+      "title": "Where it is, and where it is going",
+      "options": {
+        "mode": "markdown",
+        "content": "A level alone says where the value is. Its **change over the last minute** says where it is going: 20 °C and steady is fine; 20 °C and rising 3 °C a minute is not (Endsley: perceive, comprehend, project)."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 28
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Outlet temperature — level",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts AS time, value AS \"°C\" FROM measurement WHERE variable_id = 10 AND $__timeFilter(ts) ORDER BY 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 6,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Outlet temperature — change over 1 minute",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT time, d AS \"°C per minute\" FROM (SELECT ts AS time, value - lag(value, 12) OVER (ORDER BY ts) AS d FROM measurement WHERE variable_id = 10 AND ts > $__timeFrom()::timestamp - interval '2 minutes') s WHERE $__timeFilter(time) ORDER BY 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "5 · Display design has an empirical basis",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "text",
+      "title": "Two numbers, three encodings",
+      "options": {
+        "mode": "markdown",
+        "content": "Inlet and outlet temperature of the cooling system, latest values. **Which is higher, and by how much?**\n\nRead it from each panel. Length on a common scale beats angle and area (Cleveland & McGill, 1984)."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      }
+    },
+    {
+      "id": 17,
+      "type": "bargauge",
+      "title": "Bars",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT v.code AS metric, m.value FROM (SELECT DISTINCT ON (variable_id) variable_id, value FROM measurement WHERE variable_id IN (9, 10) ORDER BY variable_id, ts DESC) m JOIN variable_catalog v ON v.id = m.variable_id"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "text"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": true,
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "gauge",
+      "title": "Gauges",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT v.code AS metric, m.value FROM (SELECT DISTINCT ON (variable_id) variable_id, value FROM measurement WHERE variable_id IN (9, 10) ORDER BY variable_id, ts DESC) m JOIN variable_catalog v ON v.id = m.variable_id"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": 0,
+          "max": 40,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "text"
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": true,
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "piechart",
+      "title": "Pie",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT v.code AS metric, m.value FROM (SELECT DISTINCT ON (variable_id) variable_id, value FROM measurement WHERE variable_id IN (9, 10) ORDER BY variable_id, ts DESC) m JOIN variable_catalog v ON v.id = m.variable_id"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": true,
+          "fields": ""
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "right"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "6 · An indicator inherits every defect beneath it",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "text",
+      "title": "Data completeness",
+      "options": {
+        "mode": "markdown",
+        "content": "Rows stored per minute as a percentage of the expected **120** (10 signals × 12 publishes). Both ends of the window are aligned to whole minutes, so no partial minute is counted.\n\nA minute with **no** data has no row at all: look for a gap, not for a zero."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 46
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Data completeness per minute",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "seda_lab_postgresql"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "seda_lab_postgresql"
+          },
+          "refId": "A",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('minute', ts) AS time, round(count(*) * 100.0 / 120, 1) AS \"completeness %\" FROM measurement WHERE ts >= date_trunc('minute', $__timeFrom()::timestamp) AND ts < date_trunc('minute', (now() AT TIME ZONE 'UTC')) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "type": "row",
+      "title": "7 · An alarm is a request for action",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "panels": []
+    },
+    {
+      "id": 24,
+      "type": "text",
+      "title": "Alert rules",
+      "options": {
+        "mode": "markdown",
+        "content": "The state of every Grafana alert rule: *Normal*, *Pending* (the condition holds, not yet long enough), *Firing*, *No Data*. Workshop 3 creates them."
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 55
+      }
+    },
+    {
+      "id": 25,
+      "type": "alertlist",
+      "title": "Alert rules",
+      "datasource": null,
+      "targets": [],
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 55
+      },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "maxItems": 20,
+        "sortOrder": 1,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": true,
+          "normal": true,
+          "error": true
+        }
+      }
+    }
+  ],
+  "tags": [
+    "seda-block5"
+  ]
+}
