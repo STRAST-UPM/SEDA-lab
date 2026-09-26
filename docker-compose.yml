@@ -113,7 +113,7 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
       - node-exporter
-      - mqtt-exporter
+      - cadvisor
       - sql-exporter
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/ready"]
@@ -137,20 +137,22 @@ services:
     networks:
       - seda_net
 
-  # The broker's traffic, as a subscriber sees it: every message on seda/#
-  # becomes a counter per topic, and every numeric field a gauge.
-  mqtt-exporter:
-    image: kpetrem/mqtt-exporter:1.12.1
-    environment:
-      MQTT_ADDRESS: mosquitto
-      MQTT_TOPIC: "seda/#"
-      PROMETHEUS_PORT: "9344"
+  # Every container's CPU, memory, network and disk, read from its cgroups.
+  # Read-only mounts; not privileged. Docker Desktop's VM, not the laptop.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    command:
+      - "--docker_only=true"
+      - "--store_container_labels=false"
+      - "--whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service"
+      - "--enable_metrics=cpu,memory,network,diskIO"
     ports:
-      - "9344:9344"
-    depends_on:
-      mosquitto:
-        condition: service_healthy
-    # It connects once at start-up and exits if the broker is not there yet.
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
     restart: unless-stopped
     networks:
       - seda_net
