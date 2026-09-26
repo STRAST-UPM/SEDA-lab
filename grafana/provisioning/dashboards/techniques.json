@@ -360,7 +360,7 @@
       "title": "Where it is, and where it is going",
       "options": {
         "mode": "markdown",
-        "content": "A level alone says where the value is. Its **change over the last minute** says where it is going: 20 °C and steady is fine; 20 °C and rising 3 °C a minute is not (Endsley: perceive, comprehend, project)."
+        "content": "A level alone says where the value is. Its **change over the last minute** says where it is going: 20 °C and steady is fine; 20 °C and rising 3 °C a minute is not (Endsley: perceive, comprehend, project).\n\nThe change is computed against the reading twelve rows earlier: after an outage that is a reading from before the gap — a spike that is an artefact, not an event."
       },
       "gridPos": {
         "h": 8,
@@ -714,18 +714,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 0,
-            "thresholdsStyle": {
-              "mode": "off"
-            },
-            "stacking": {
-              "mode": "none"
-            }
-          },
           "color": {
             "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "insertNulls": 60000,
+            "spanNulls": false,
+            "showPoints": "always"
           }
         },
         "overrides": []
