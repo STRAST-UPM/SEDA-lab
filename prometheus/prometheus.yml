@@ -21,14 +21,16 @@ scrape_configs:
     static_configs:
       - targets: ["sql-exporter:9399"]
 
-  # Every container of the platform, from its cgroups (cAdvisor). Only seda-lab's
-  # containers are kept, and the compose service becomes a short label: service.
+  # Every container of the platform, from its cgroups (cAdvisor). Only this
+  # platform's containers are kept — the compose project is the folder name, so
+  # seda-lab, or seda-lab-main from a ZIP — and the compose service becomes a
+  # short label: service.
   - job_name: "containers"
     static_configs:
       - targets: ["cadvisor:8080"]
     metric_relabel_configs:
       - source_labels: [container_label_com_docker_compose_project]
-        regex: seda-lab
+        regex: seda-lab.*
         action: keep
       - source_labels: [container_label_com_docker_compose_service]
         target_label: service
