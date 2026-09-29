@@ -586,10 +586,15 @@ Consultar la tabla real de ordenes en PostgreSQL:
 docker compose exec postgres psql -U seda -d seda_lab -c 'select id, component_id, ts, command, value, status from "command" order by ts desc limit 10;'
 ```
 
-Consultar los ACKs registrados como eventos:
+Los ACKs se publican en `seda/plants/<planta>/components/<componente>/commands/<command_id>/ack`
+y solo se pueden observar en MQTT (comando anterior). Reference Platform 1.0 **no los
+persiste**: Node-RED se suscribe a `.../commands/+`, que no incluye el nivel `/ack`, y la
+tabla `event` queda vacia.
+
+Escuchar solo los ACKs:
 
 ```bash
-docker compose exec postgres psql -U seda -d seda_lab -c "select id, component_id, ts, event from event order by ts desc limit 10;"
+docker compose exec mosquitto mosquitto_sub -h localhost -t 'seda/plants/+/components/+/commands/+/ack' -v
 ```
 
 ## Iteracion 7 — Prueba de visualizacion de ordenes

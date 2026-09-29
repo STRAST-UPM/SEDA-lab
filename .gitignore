@@ -1,1 +1,7 @@
 .DS_Store
+
+# Node-RED writes its runtime state here on every start; not part of the platform
+nodered/data/.config.nodes.json
+nodered/data/.config.nodes.json.backup
+nodered/data/.config.users.json
+nodered/data/.config.users.json.backup

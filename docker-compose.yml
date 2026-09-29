@@ -1,3 +1,6 @@
+# Project name fixed so Docker Desktop shows the group as seda-lab whatever the folder is called.
+name: seda-lab
+
 services:
   postgres:
     image: postgres:16
