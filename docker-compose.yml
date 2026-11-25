@@ -142,8 +142,10 @@ services:
 
   # Every container's CPU, memory, network and disk, read from its cgroups.
   # Read-only mounts; not privileged. Docker Desktop's VM, not the laptop.
+  # v0.53+ (only on ghcr.io) and containerd's socket: a fresh Docker Desktop
+  # stores images with containerd, where v0.52.1 sees no container at all.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    image: ghcr.io/google/cadvisor:v0.61.1
     command:
       - "--docker_only=true"
       - "--store_container_labels=false"
@@ -156,6 +158,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
     restart: unless-stopped
     networks:
       - seda_net
