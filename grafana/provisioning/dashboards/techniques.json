@@ -13,7 +13,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "1 · Every window is an editorial decision",
+      "title": "The plant and its signals",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -26,22 +26,50 @@
     {
       "id": 2,
       "type": "text",
-      "title": "Three windows, one signal",
+      "title": "Components and signals of the plant",
       "options": {
         "mode": "markdown",
-        "content": "Generator-set active power as the **last sample**, the **mean over 1 minute** and the **mean over 15 minutes**.\n\nThe same machine, three stories: jumpy and honest, smooth and slightly late, calm and badly lagging. Which one answers *is the generator dropping now?* Which answers *how was the last hour?*"
+        "content": "SEDA-Lab simulates a **microgrid**: a small electrical network with its own sources of power, connected to the public grid. Its signals and their usual values come from a real microgrid at Mesa del Sol, in New Mexico (United States). That is why the frequency is 60 Hz, not 50 Hz as in Spain, and the voltage about 480 V: they are the values of the grid in the United States.\n\nFour sources (the battery, the solar panels, the gas engine and the fuel cell) feed the **main bus**, to which the plant's equipment is connected. The **main circuit breaker** joins the main bus to the **grid connection point**, where the public grid arrives. A **cooling system** removes the heat that the fuel cell produces. The simulator publishes every signal every 5 seconds. It does not model the electrical physics: each signal is generated on its own, so a change in one does not move the others.\n\nThe signal names come from the real plant. MG-LV-MSB is the low-voltage main switchboard of the microgrid, that is, its main bus. MCCB is a type of circuit breaker. The breaker's signal is named after *island mode*: how a microgrid runs on its own sources when this breaker disconnects it from the grid. The table says what each signal measures in a real plant, where the signals do depend on each other.\n\nIn the database, each row of the table `measurement` names its signal by a number, its `variable_id`, which the table `variable_catalog` lists and the table below repeats. The queries of the panels below choose a signal by that number: `variable_id = 10` is the outlet temperature.\n\n| Component | Signal | `variable_id` | What it measures in a real plant | Usual value in SEDA-Lab |\n|---|---|---|---|---|\n| Battery | `Battery_Active_Power` | 1 | Power that the battery delivers. Negative while it charges | −0.6 to 0.1 kW |\n| PV power conversion system | `PVPCS_Active_Power` | 2 | Power from the solar (photovoltaic, PV) panels | about 0 kW at night, up to 39 kW at midday |\n| Gas engine | `GE_Active_Power` | 3 | Power from an engine that burns gas to turn a generator. Slightly negative while it is stopped, when its own equipment draws a little power | about 54 kW at night, when it runs. About −1 kW by day, when it is stopped |\n| Fuel cell | `FC_Active_Power` | 4 | Power from the fuel cell, which turns a fuel into electricity and heat | about 37 kW |\n| Main circuit breaker | `Island_mode_MCCB_Active_Power` | 5 | Power that flows between the plant and the grid. Its sign gives the direction of the flow | −45 to −11 kW: always the same direction |\n| Main bus | `MG-LV-MSB_AC_Voltage` | 6 | Voltage inside the plant. The same as the grid voltage while the plant is connected | about 484 V |\n| Main bus | `MG-LV-MSB_Frequency` | 8 | Balance between power generated and power used. It falls if more power is used than generated | 60.00 Hz |\n| Grid connection point | `Receiving_Point_AC_Voltage` | 7 | Voltage that the public grid delivers to the plant | about 484 V |\n| Cooling system | `Inlet_Temperature_of_Chilled_Water` | 9 | Temperature of the water entering the cooling system | 18 to 24 °C |\n| Cooling system | `Outlet_Temperature` | 10 | Temperature of the water leaving the cooling system | 18 to 23 °C |\n\nThe solar power, the gas engine and the two temperatures follow the simulator's day. Its daylight runs from 06:00 to 18:00 UTC (07:00 to 19:00 in Spain in winter), and the rest is night."
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
+        "h": 27,
+        "w": 24,
         "x": 0,
         "y": 1
       }
     },
     {
       "id": 3,
+      "type": "row",
+      "title": "1 · Last value and averages",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "panels": []
+    },
+    {
+      "id": 4,
+      "type": "text",
+      "title": "Last value and two averages",
+      "options": {
+        "mode": "markdown",
+        "content": "The gas engine runs mostly at night, when there is no solar power. Its power is drawn three ways on the right: each **last value** as it arrives every 5 seconds, its **average over the last minute**, and its **average over the last 15 minutes**.\n\nThe longer the period of the average, the smoother the line, and the later it shows a change. Compare the three lines: which one would show at once that the engine has stopped? Which would you use to compare one hour with the next?"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 6,
+        "x": 0,
+        "y": 29
+      }
+    },
+    {
+      "id": 5,
       "type": "timeseries",
-      "title": "Generator-set active power — three windows",
+      "title": "Gas engine power with its averages over 1 and 15 minutes",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -56,7 +84,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT ts AS time, value AS \"last sample\" FROM measurement WHERE variable_id = 3 AND $__timeFilter(ts) ORDER BY 1"
+          "rawSql": "SELECT ts AS time, value AS \"last value\" FROM measurement WHERE variable_id = 3 AND $__timeFilter(ts) ORDER BY 1"
         },
         {
           "datasource": {
@@ -67,7 +95,7 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time, v AS \"mean 1 min\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '1 minute' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '1 minute') s WHERE $__timeFilter(time) ORDER BY 1"
+          "rawSql": "SELECT time, v AS \"average over 1 minute\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '1 minute' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '1 minute') s WHERE $__timeFilter(time) ORDER BY 1"
         },
         {
           "datasource": {
@@ -78,14 +106,14 @@
           "rawQuery": true,
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT time, v AS \"mean 15 min\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '15 minutes' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '15 minutes') s WHERE $__timeFilter(time) ORDER BY 1"
+          "rawSql": "SELECT time, v AS \"average over 15 minutes\" FROM (SELECT ts AS time, avg(value) OVER (ORDER BY ts RANGE BETWEEN interval '15 minutes' PRECEDING AND CURRENT ROW) AS v FROM measurement WHERE variable_id = 3 AND ts > $__timeFrom()::timestamp - interval '15 minutes') s WHERE $__timeFilter(time) ORDER BY 1"
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 18,
         "x": 6,
-        "y": 1
+        "y": 29
       },
       "fieldConfig": {
         "defaults": {
@@ -101,44 +129,103 @@
             }
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last value"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9A9A9A"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "average over 1 minute"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6E6E6E"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "average over 15 minutes"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              }
+            ]
+          }
+        ]
       }
     },
     {
-      "id": 4,
+      "id": 6,
       "type": "row",
-      "title": "2 · Every current value carries its age",
+      "title": "2 · Newest measurement and its age",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 41
       },
       "panels": []
     },
     {
-      "id": 5,
+      "id": 7,
       "type": "text",
-      "title": "A value and its age",
+      "title": "A value and how old it is",
       "options": {
         "mode": "markdown",
-        "content": "The outlet temperature as it was **last received**, and **how long ago** that was. The age turns red after 30 s: the value beside it may no longer be true.\n\nCompare *Plant — as delivered*: its table shows the last values with no age at all."
+        "content": "The newest outlet temperature, and **how many seconds ago** it was measured. If the simulator or the data pipeline stops, the value stays on the screen unchanged, and only its age tells you that it is old. The age turns red above 30 s.\n\nThe table of the dashboard *Plant — as delivered* shows the time of each measurement instead, and leaves you to compare it with the clock."
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 0,
-        "y": 10
+        "y": 42
       }
     },
     {
-      "id": 6,
+      "id": 8,
       "type": "stat",
-      "title": "Outlet temperature — last received",
+      "title": "Outlet temperature, newest measurement",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -157,10 +244,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 9,
         "x": 6,
-        "y": 10
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -193,9 +280,9 @@
       }
     },
     {
-      "id": 7,
+      "id": 9,
       "type": "stat",
-      "title": "…received this many seconds ago",
+      "title": "Age of the newest outlet temperature",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -214,10 +301,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 9,
         "x": 15,
-        "y": 10
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -253,37 +340,37 @@
       }
     },
     {
-      "id": 8,
+      "id": 10,
       "type": "row",
-      "title": "3 · Deviation from normal; colour only for the abnormal",
+      "title": "3 · Value against its normal range",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 54
       },
       "panels": []
     },
     {
-      "id": 9,
+      "id": 11,
       "type": "text",
-      "title": "The normal band",
+      "title": "Grey, orange and red",
       "options": {
         "mode": "markdown",
-        "content": "The real plant's outlet temperature: median **18.0 °C**, 95th percentile **28.7 °C** (`simulator/calibration.json`). The rule in Node-RED fires above **30 °C**.\n\nThe line is grey while normal. Colour appears only above p95 (orange) and above the rule (red): the appearance of colour is itself the signal (ISA-101)."
+        "content": "In SEDA-Lab the outlet temperature stays between **18 and 23 °C**, its normal range. The line is grey while the value is normal. Above **24 °C**, which it does not reach in normal operation, it turns orange: an early warning, before the alarm. Above **30 °C**, the threshold of Node-RED's alarm HIGH_OUTLET_TEMPERATURE, it turns red. The dashed lines mark 24 and 30 °C.\n\nOn a screen that is grey by default, a colour tells you at once that something is abnormal (ISA-101, the standard for operators' screens)."
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 0,
-        "y": 19
+        "y": 55
       }
     },
     {
-      "id": 10,
+      "id": 12,
       "type": "timeseries",
-      "title": "Outlet temperature against its normal band",
+      "title": "Outlet temperature against its normal range",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -302,27 +389,26 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 18,
         "x": 6,
-        "y": 19
+        "y": 55
       },
       "fieldConfig": {
         "defaults": {
           "unit": "celsius",
           "color": {
-            "mode": "fixed",
-            "fixedColor": "text"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "value": null,
-                "color": "transparent"
+                "color": "text"
               },
               {
-                "value": 28.7,
+                "value": 24,
                 "color": "orange"
               },
               {
@@ -332,47 +418,50 @@
             ]
           },
           "custom": {
-            "lineWidth": 1,
+            "lineWidth": 2,
+            "gradientMode": "scheme",
             "thresholdsStyle": {
-              "mode": "line+area"
-            }
+              "mode": "dashed"
+            },
+            "axisSoftMin": 18,
+            "axisSoftMax": 32
           }
         },
         "overrides": []
       }
     },
     {
-      "id": 11,
+      "id": 13,
       "type": "row",
-      "title": "4 · Level and rate of change",
+      "title": "4 · Value and its trend",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 67
       },
       "panels": []
     },
     {
-      "id": 12,
+      "id": 14,
       "type": "text",
-      "title": "Where it is, and where it is going",
+      "title": "Value and trend",
       "options": {
         "mode": "markdown",
-        "content": "A level alone says where the value is. Its **change over the last minute** says where it is going: 20 °C and steady is fine; 20 °C and rising 3 °C a minute is not (Endsley: perceive, comprehend, project).\n\nThe change is computed against the reading twelve rows earlier: after an outage that is a reading from before the gap — a spike that is an artefact, not an event."
+        "content": "The value says where the temperature is. Its **trend**, the change over the last minute, says where it is going: 20 °C and steady is normal, but 20 °C and rising 3 °C a minute is not.\n\nEach point compares a value with the one stored 12 measurements before it, which is one minute earlier when no measurement is missing. After a gap in the data, that earlier value is older, so the change can look large although the plant did not change."
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 0,
-        "y": 28
+        "y": 68
       }
     },
     {
-      "id": 13,
+      "id": 15,
       "type": "timeseries",
-      "title": "Outlet temperature — level",
+      "title": "Outlet temperature",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -391,10 +480,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 9,
         "x": 6,
-        "y": 28
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -410,16 +499,17 @@
             }
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           }
         },
         "overrides": []
       }
     },
     {
-      "id": 14,
+      "id": 16,
       "type": "timeseries",
-      "title": "Outlet temperature — change over 1 minute",
+      "title": "Change of the outlet temperature over 1 minute",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -438,10 +528,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 9,
         "x": 15,
-        "y": 28
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -457,44 +547,45 @@
             }
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           }
         },
         "overrides": []
       }
     },
     {
-      "id": 15,
+      "id": 17,
       "type": "row",
-      "title": "5 · Display design has an empirical basis",
+      "title": "5 · Bars, gauges and pie chart",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 80
       },
       "panels": []
     },
     {
-      "id": 16,
+      "id": 18,
       "type": "text",
-      "title": "Two numbers, three encodings",
+      "title": "Two temperatures drawn three ways",
       "options": {
         "mode": "markdown",
-        "content": "Inlet and outlet temperature of the cooling system, latest values. **Which is higher, and by how much?**\n\nRead it from each panel. Length on a common scale beats angle and area (Cleveland & McGill, 1984)."
+        "content": "The newest inlet and outlet temperatures of the cooling system, drawn as bars, gauges and a pie chart. From each of the three panels, try to tell which temperature is higher, and by how much.\n\nPeople read a length on a common scale more accurately than an angle or an area (Cleveland and McGill, 1984), so the bars answer best and the pie chart worst."
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 0,
-        "y": 37
+        "y": 81
       }
     },
     {
-      "id": 17,
+      "id": 19,
       "type": "bargauge",
-      "title": "Bars",
+      "title": "Cooling temperatures as bars",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -513,10 +604,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 6,
-        "y": 37
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -534,7 +625,8 @@
             ]
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           }
         },
         "overrides": []
@@ -552,9 +644,9 @@
       }
     },
     {
-      "id": 18,
+      "id": 20,
       "type": "gauge",
-      "title": "Gauges",
+      "title": "Cooling temperatures as gauges",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -573,10 +665,10 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 12,
-        "y": 37
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -594,7 +686,8 @@
             ]
           },
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           }
         },
         "overrides": []
@@ -610,9 +703,9 @@
       }
     },
     {
-      "id": 19,
+      "id": 21,
       "type": "piechart",
-      "title": "Pie",
+      "title": "Cooling temperatures as a pie chart",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "seda_lab_postgresql"
@@ -631,16 +724,47 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 18,
-        "y": 37
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
           "unit": "celsius"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Inlet_Temperature_of_Chilled_Water"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6E6E6E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outlet_Temperature"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9A9A9A"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -657,35 +781,35 @@
       }
     },
     {
-      "id": 20,
+      "id": 22,
       "type": "row",
-      "title": "6 · An indicator inherits every defect beneath it",
+      "title": "6 · Completeness of the data",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 93
       },
       "panels": []
     },
     {
-      "id": 21,
+      "id": 23,
       "type": "text",
-      "title": "Data completeness",
+      "title": "Measurements stored per minute",
       "options": {
         "mode": "markdown",
-        "content": "Rows stored per minute as a percentage of the expected **120** (10 signals × 12 publishes). Both ends of the window are aligned to whole minutes, so no partial minute is counted.\n\nA minute with **no** data has no row at all: look for a gap, not for a zero."
+        "content": "Each point is the number of measurements stored in one minute, as a percentage of the **120** expected: 10 signals, each published 12 times a minute (every 5 seconds). The current minute is not drawn until it ends.\n\nAn indicator computed from these measurements, such as an average over a minute, is wrong when some are missing. A minute with no measurements has no point at all: look for a gap in the line, not for a zero."
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 6,
         "x": 0,
-        "y": 46
+        "y": 94
       }
     },
     {
-      "id": 22,
+      "id": 24,
       "type": "timeseries",
       "title": "Data completeness per minute",
       "datasource": {
@@ -706,16 +830,17 @@
         }
       ],
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 18,
         "x": 6,
-        "y": 46
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
           "custom": {
             "lineWidth": 1,
@@ -728,44 +853,44 @@
       }
     },
     {
-      "id": 23,
+      "id": 25,
       "type": "row",
-      "title": "7 · An alarm is a request for action",
+      "title": "7 · State of the alert rules",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 106
       },
       "panels": []
     },
     {
-      "id": 24,
+      "id": 26,
       "type": "text",
       "title": "Alert rules",
       "options": {
         "mode": "markdown",
-        "content": "The state of every Grafana alert rule: *Normal*, *Pending* (the condition holds, not yet long enough), *Firing*, *No Data*. Workshop 3 creates them."
+        "content": "The state of each Grafana alert rule: *Normal*, *Pending* (the condition holds, but not yet for long enough), *Firing* (it has held long enough) or *No Data* (no measurements arrive). Your group's rule appears here once you create it, later in this workshop."
       },
       "gridPos": {
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 55
+        "y": 107
       }
     },
     {
-      "id": 25,
+      "id": 27,
       "type": "alertlist",
-      "title": "Alert rules",
+      "title": "State of the alert rules",
       "datasource": null,
       "targets": [],
       "gridPos": {
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 55
+        "y": 107
       },
       "options": {
         "viewMode": "list",
