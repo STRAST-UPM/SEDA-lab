@@ -29,10 +29,10 @@
       "title": "Components and signals of the plant",
       "options": {
         "mode": "markdown",
-        "content": "SEDA-Lab simulates a **microgrid**: a small electrical network with its own sources of power, connected to the public grid. Its signals and their usual values come from a real microgrid at Mesa del Sol, in New Mexico (United States). That is why the frequency is 60 Hz, not 50 Hz as in Spain, and the voltage about 480 V: they are the values of the grid in the United States.\n\nFour sources (the battery, the solar panels, the gas engine and the fuel cell) feed the **main bus**, to which the plant's equipment is connected. The **main circuit breaker** joins the main bus to the **grid connection point**, where the public grid arrives. A **cooling system** removes the heat that the fuel cell produces. The simulator publishes every signal every 5 seconds. It does not model the electrical physics: each signal is generated on its own, so a change in one does not move the others.\n\nThe signal names come from the real plant. MG-LV-MSB is the low-voltage main switchboard of the microgrid, that is, its main bus. MCCB is a type of circuit breaker. The breaker's signal is named after *island mode*: how a microgrid runs on its own sources when this breaker disconnects it from the grid. The table says what each signal measures in a real plant, where the signals do depend on each other.\n\n| Component | Signal | What it measures in a real plant | Usual value in SEDA-Lab |\n|---|---|---|---|\n| Battery | `Battery_Active_Power` | Power that the battery delivers. Negative while it charges | −0.6 to 0.1 kW |\n| PV power conversion system | `PVPCS_Active_Power` | Power from the solar (photovoltaic, PV) panels | about 0 kW at night, up to 39 kW at midday |\n| Gas engine | `GE_Active_Power` | Power from an engine that burns gas to turn a generator. Slightly negative while it is stopped, when its own equipment draws a little power | about 54 kW at night, when it runs. About −1 kW by day, when it is stopped |\n| Fuel cell | `FC_Active_Power` | Power from the fuel cell, which turns a fuel into electricity and heat | about 37 kW |\n| Main circuit breaker | `Island_mode_MCCB_Active_Power` | Power that flows between the plant and the grid. Its sign gives the direction of the flow | −45 to −11 kW: always the same direction |\n| Main bus | `MG-LV-MSB_AC_Voltage` | Voltage inside the plant. The same as the grid voltage while the plant is connected | about 484 V |\n| Main bus | `MG-LV-MSB_Frequency` | Balance between power generated and power used. It falls if more power is used than generated | 60.00 Hz |\n| Grid connection point | `Receiving_Point_AC_Voltage` | Voltage that the public grid delivers to the plant | about 484 V |\n| Cooling system | `Inlet_Temperature_of_Chilled_Water` | Temperature of the water entering the cooling system | 18 to 24 °C |\n| Cooling system | `Outlet_Temperature` | Temperature of the water leaving the cooling system | 18 to 23 °C |\n\nThe solar power, the gas engine and the two temperatures follow the simulator's day. Its daylight runs from 06:00 to 18:00 UTC (07:00 to 19:00 in Spain in winter), and the rest is night."
+        "content": "SEDA-Lab simulates a **microgrid**: a small electrical network with its own sources of power, connected to the public grid. Its signals and their usual values come from a real microgrid at Mesa del Sol, in New Mexico (United States). That is why the frequency is 60 Hz, not 50 Hz as in Spain, and the voltage about 480 V: they are the values of the grid in the United States.\n\nFour sources (the battery, the solar panels, the gas engine and the fuel cell) feed the **main bus**, to which the plant's equipment is connected. The **main circuit breaker** joins the main bus to the **grid connection point**, where the public grid arrives. A **cooling system** removes the heat that the fuel cell produces. The simulator publishes every signal every 5 seconds. It does not model the electrical physics: each signal is generated on its own, so a change in one does not move the others.\n\nThe signal names come from the real plant. MG-LV-MSB is the low-voltage main switchboard of the microgrid, that is, its main bus. MCCB is a type of circuit breaker. The breaker's signal is named after *island mode*: how a microgrid runs on its own sources when this breaker disconnects it from the grid. The table says what each signal measures in a real plant, where the signals do depend on each other.\n\nIn the database, each row of the table `measurement` names its signal by a number, its `variable_id`, which the table `variable_catalog` lists and the table below repeats. The queries of the panels below choose a signal by that number: `variable_id = 10` is the outlet temperature.\n\n| Component | Signal | `variable_id` | What it measures in a real plant | Usual value in SEDA-Lab |\n|---|---|---|---|---|\n| Battery | `Battery_Active_Power` | 1 | Power that the battery delivers. Negative while it charges | −0.6 to 0.1 kW |\n| PV power conversion system | `PVPCS_Active_Power` | 2 | Power from the solar (photovoltaic, PV) panels | about 0 kW at night, up to 39 kW at midday |\n| Gas engine | `GE_Active_Power` | 3 | Power from an engine that burns gas to turn a generator. Slightly negative while it is stopped, when its own equipment draws a little power | about 54 kW at night, when it runs. About −1 kW by day, when it is stopped |\n| Fuel cell | `FC_Active_Power` | 4 | Power from the fuel cell, which turns a fuel into electricity and heat | about 37 kW |\n| Main circuit breaker | `Island_mode_MCCB_Active_Power` | 5 | Power that flows between the plant and the grid. Its sign gives the direction of the flow | −45 to −11 kW: always the same direction |\n| Main bus | `MG-LV-MSB_AC_Voltage` | 6 | Voltage inside the plant. The same as the grid voltage while the plant is connected | about 484 V |\n| Main bus | `MG-LV-MSB_Frequency` | 8 | Balance between power generated and power used. It falls if more power is used than generated | 60.00 Hz |\n| Grid connection point | `Receiving_Point_AC_Voltage` | 7 | Voltage that the public grid delivers to the plant | about 484 V |\n| Cooling system | `Inlet_Temperature_of_Chilled_Water` | 9 | Temperature of the water entering the cooling system | 18 to 24 °C |\n| Cooling system | `Outlet_Temperature` | 10 | Temperature of the water leaving the cooling system | 18 to 23 °C |\n\nThe solar power, the gas engine and the two temperatures follow the simulator's day. Its daylight runs from 06:00 to 18:00 UTC (07:00 to 19:00 in Spain in winter), and the rest is night."
       },
       "gridPos": {
-        "h": 25,
+        "h": 27,
         "w": 24,
         "x": 0,
         "y": 1
@@ -47,7 +47,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 28
       },
       "panels": []
     },
@@ -63,7 +63,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 27
+        "y": 29
       }
     },
     {
@@ -113,7 +113,7 @@
         "h": 12,
         "w": 18,
         "x": 6,
-        "y": 27
+        "y": 29
       },
       "fieldConfig": {
         "defaults": {
@@ -203,7 +203,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 41
       },
       "panels": []
     },
@@ -219,7 +219,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 40
+        "y": 42
       }
     },
     {
@@ -247,7 +247,7 @@
         "h": 12,
         "w": 9,
         "x": 6,
-        "y": 40
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -304,7 +304,7 @@
         "h": 12,
         "w": 9,
         "x": 15,
-        "y": 40
+        "y": 42
       },
       "fieldConfig": {
         "defaults": {
@@ -348,7 +348,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 54
       },
       "panels": []
     },
@@ -364,7 +364,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 53
+        "y": 55
       }
     },
     {
@@ -392,7 +392,7 @@
         "h": 12,
         "w": 18,
         "x": 6,
-        "y": 53
+        "y": 55
       },
       "fieldConfig": {
         "defaults": {
@@ -439,7 +439,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 67
       },
       "panels": []
     },
@@ -455,7 +455,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 66
+        "y": 68
       }
     },
     {
@@ -483,7 +483,7 @@
         "h": 12,
         "w": 9,
         "x": 6,
-        "y": 66
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -531,7 +531,7 @@
         "h": 12,
         "w": 9,
         "x": 15,
-        "y": 66
+        "y": 68
       },
       "fieldConfig": {
         "defaults": {
@@ -563,7 +563,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 78
+        "y": 80
       },
       "panels": []
     },
@@ -579,7 +579,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 79
+        "y": 81
       }
     },
     {
@@ -607,7 +607,7 @@
         "h": 12,
         "w": 6,
         "x": 6,
-        "y": 79
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -668,7 +668,7 @@
         "h": 12,
         "w": 6,
         "x": 12,
-        "y": 79
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -727,7 +727,7 @@
         "h": 12,
         "w": 6,
         "x": 18,
-        "y": 79
+        "y": 81
       },
       "fieldConfig": {
         "defaults": {
@@ -789,7 +789,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 93
       },
       "panels": []
     },
@@ -805,7 +805,7 @@
         "h": 12,
         "w": 6,
         "x": 0,
-        "y": 92
+        "y": 94
       }
     },
     {
@@ -833,7 +833,7 @@
         "h": 12,
         "w": 18,
         "x": 6,
-        "y": 92
+        "y": 94
       },
       "fieldConfig": {
         "defaults": {
@@ -861,7 +861,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 106
       },
       "panels": []
     },
@@ -877,7 +877,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 105
+        "y": 107
       }
     },
     {
@@ -890,7 +890,7 @@
         "h": 8,
         "w": 18,
         "x": 6,
-        "y": 105
+        "y": 107
       },
       "options": {
         "viewMode": "list",
